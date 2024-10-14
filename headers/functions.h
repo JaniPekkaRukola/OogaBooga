@@ -18,6 +18,8 @@ Chunk* get_player_chunk();
 Entity* entity_create_to_chunk(Chunk* chunk);
 typedef struct Chunk Chunk;
 
+#define MAX_BUILDING_COUNT 20
+BuildingData buildings[MAX_BUILDING_COUNT];
 
 // ESSENTIALS -------------------------------------------------------------------------------------------->
 	Vector2 get_mouse_pos_in_ndc() {
@@ -706,7 +708,8 @@ typedef struct Chunk Chunk;
 			// BiomeID current_dim = world->dimension->dimension_id;
 			DimensionID current_dim = world->dimension->id;
 
-			Entity* en = entity_create();
+			// Entity* en = entity_create();
+			Entity* en = entity_create_to_chunk(player_chunk);
 			setup_portal(en, current_dim, dest, get_dimensionData(dest)->portal_sprite_in);
 			en->pos = get_mouse_pos_in_world_space();
 
@@ -895,20 +898,20 @@ typedef struct Chunk Chunk;
 			case ITEM_TOOL_shovel: return SPRITE_TOOL_shovel; break;
 			case ITEM_TOOL_torch: return SPRITE_TOOL_torch; break;
 
-			default: {log_error("Error @ 'get_sprite_size_from_itemID' missing case\n"); return 0;} break;
+			default: {log_error("Error @ 'get_sprite_from_itemID' missing case\n"); return 0;} break;
 		}
 	}
 
-	SpriteID get_sprite_id_from_tool(ToolID tool_id) {
-		// NOTE: prolly not in use
-		// :TOOL -------------------------->
-		switch (tool_id) {
-			case TOOL_pickaxe: return SPRITE_TOOL_pickaxe; break;
-			case TOOL_axe: return SPRITE_TOOL_axe; break;
-			case TOOL_shovel: return SPRITE_TOOL_shovel; break;
-			default: return 0; break;
-		}
-	}
+	// SpriteID get_sprite_id_from_tool(ToolID tool_id) {
+	// 	// NOTE: prolly not in use
+	// 	// :TOOL -------------------------->
+	// 	switch (tool_id) {
+	// 		case TOOL_pickaxe: return SPRITE_TOOL_pickaxe; break;
+	// 		case TOOL_axe: return SPRITE_TOOL_axe; break;
+	// 		case TOOL_shovel: return SPRITE_TOOL_shovel; break;
+	// 		default: return 0; break;
+	// 	}
+	// }
 
 	SpriteID get_sprite_id_from_workstation(WorkStationID workstation_id) {
 		switch (workstation_id) {
@@ -1030,6 +1033,8 @@ typedef struct Chunk Chunk;
 	// :INVENTORY || :ITEM ------------>
 	void add_item_to_inventory(ItemID item, string name, int amount, EntityArchetype arch, SpriteID sprite_id, ToolID tool_id, bool valid) {
 
+		// FIX: Entityarchetype is passed to this func but not used because it should always be "ARCH_item". delete it
+
 		Player *player = world->player;
 		assert(player, "Player was a nullptr @ 'add_item_to_inventory'");
 
@@ -1049,7 +1054,8 @@ typedef struct Chunk Chunk;
 			if (!player->inventory[i].valid) {
 				player->inventory[i].name = name;
 				player->inventory[i].amount = amount;
-				player->inventory[i].arch = arch;
+				// player->inventory[i].arch = arch;
+				player->inventory[i].arch = ARCH_item;
 				player->inventory[i].sprite_id = sprite_id;
 				player->inventory[i].tool_id = tool_id;
 				player->inventory[i].valid = valid;
@@ -1126,15 +1132,18 @@ typedef struct Chunk Chunk;
 			return false;
 		}
 
+		Chunk* chunk = get_player_chunk();
+
 		for (int i = 0; i < item.amount; i++){
-				Entity* en = entity_create();
-				setup_item(en, item.item_id);
-				en->pos = pos;
-				en->pos.x -= i;
-				en->arch = item.arch;
-				en->sprite_id = item.sprite_id;
-				en->tool_id = item.tool_id;
-				printf("Spawned item '%s' to world\n", item.name);
+			// Entity* en = entity_create();
+			Entity* en = entity_create_to_chunk(chunk);
+			setup_item(en, item.item_id);
+			en->pos = pos;
+			en->pos.x -= i;
+			en->arch = item.arch;
+			en->sprite_id = item.sprite_id;
+			en->tool_id = item.tool_id;
+			printf("Spawned item '%s' to world\n", item.name);
 		}
 
 		return true;
@@ -1458,6 +1467,30 @@ typedef struct Chunk Chunk;
 		config.enable_spacialization = true;
 	}
 
+	void setup_building(Entity* en, BuildingID id){
+		en->arch = ARCH_building;
+		en->unselectable = true;
+		en->building_id = id;
+
+		switch (id){
+			case BUILDING_house:{
+				en->name = STR("HOUSE");
+				en->sprite_id = SPRITE_BUILDING_house;
+				en->has_custom_rendering_size=false;
+				Vector2 size = get_sprite_size(get_sprite(SPRITE_BUILDING_house));
+				en->custom_rendering_size=v2(size.x * 0.5, size.y * 0.5);
+				en->hitbox = (Range2f){
+					.min.x = (size.x * 0.25),
+					.min.y = 0,
+					.max.x = (size.x * 0.25),
+					.max.y = 10
+					};
+			} break;
+
+			default:{log_error("Missing setup case from 'setup_building'");}break;
+		}
+	}
+
 	void setup_item(Entity* en, ItemID item_id) {
 
 		if (item_id == ITEM_nil) {
@@ -1564,6 +1597,71 @@ typedef struct Chunk Chunk;
 		#endif
 	}
 
+	void setup_tool(ToolID id){
+		// InventoryItemData* item = 0;
+
+		if (id == TOOL_nil) printf("Tried to setup tool with id 'TOOL_nil'"); return;
+
+		ItemData* item = 0;
+
+		// item->arch = ARCH_tool;
+		item->arch = ARCH_item;
+		item->category = ARCH_tool;
+		item->item_id = 0;
+		item->name = STR("temp");
+		item->sprite_id = SPRITE_nil;
+		item->tool_id = id;
+
+		// tool_data init
+		item->tool_data.max_durability = 1;
+		item->tool_data.durability = 1;
+		item->tool_data.audio_hit = AUDIO_nil;
+		item->tool_data.audio_miss = AUDIO_nil;
+
+		switch (id){
+			case TOOL_axe:{
+				{
+					item->name = STR("Axe");
+					item->sprite_id = SPRITE_TOOL_axe;
+					item->tool_data.max_durability = 100;
+					item->tool_data.durability = 100;
+					// item->tool_data.audio_hit = AUDIO_hit_som;
+					item->tool_data.audio_miss = AUDIO_swing_fast;
+				}
+			} break;
+
+			case TOOL_pickaxe:{
+				{
+					item->name = STR("Pickaxe");
+					item->sprite_id = SPRITE_TOOL_pickaxe;
+					item->tool_data.max_durability = 100;
+					item->tool_data.durability = 100;
+					// item->tool_data.audio_hit = AUDIO_hit_som;
+					item->tool_data.audio_miss = AUDIO_swing_slow;
+				}
+			} break;
+
+			case TOOL_shovel:{
+				{
+					item->name = STR("Shovel");
+					item->sprite_id = SPRITE_TOOL_shovel;
+					item->tool_data.max_durability = 100;
+					item->tool_data.durability = 100;
+					// item->tool_data.audio_hit = AUDIO_hit_som;
+					item->tool_data.audio_miss = AUDIO_swing_slow;
+				}
+			} break;
+
+			default:{log_error("%d", id); assert(1==0, " = id. Missing case @ 'setup_tool' with"); }break;
+		}
+	}
+
+	void setup_all_tools(){
+		for (ToolID id = 1; id < TOOL_MAX; id++){
+			setup_tool(id);
+		}
+		log_verbose("Setup all tools");
+	}
 
 	void setup_rock(Entity* en, RockType type) {
 		en->arch = ARCH_rock;
@@ -1600,7 +1698,7 @@ typedef struct Chunk Chunk;
 		en->enable_shadow = true;
 
 		switch (type){
-			case TREE_pine: en->sprite_id = SPRITE_tree_pine; en->name = STR("Pine tree"); break;
+			case TREE_pine: en->sprite_id = SPRITE_tree_pine; en->name = STR("Pine tree"); en->has_custom_rendering_size=true; en->custom_rendering_size=v2(89/2, 200/2); break;
 			case TREE_spruce: en->sprite_id = SPRITE_tree_spruce; en->name = STR("Spruce tree"); break;
 			case TREE_magical:{
 				int random = get_random_int_in_range(0,1);
@@ -1820,7 +1918,20 @@ typedef struct Chunk Chunk;
 		// en->render_sprite = true;
 	}
 
+	
 
+	void setup_all_building_resources(){
+		buildings[BUILDING_nil] = (BuildingData){
+			.image=load_image_from_disk(STR("res/sprites/missing_texture.png"), get_heap_allocator()),
+		};
+		
+		buildings[BUILDING_house] = (BuildingData){
+			.image=load_image_from_disk(STR("res/sprites/house1.png"), get_heap_allocator()),
+			.name=STR("House1"),
+			// .hitbox = (Range2f){.min.x=0,.min.y=0,.max.x=10,.max.y=10}
+		};
+
+	}
 
 
 	void setup_dimension(DimensionID id) {

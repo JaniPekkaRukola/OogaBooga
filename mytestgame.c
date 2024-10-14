@@ -3,7 +3,6 @@
 
 // ----- ::Settings || ::Tweaks || ::Global --------------------------------------------------------|
 
-bool IS_DEBUG = false;
 // #define DEV_TESTING
 
 // bool print_fps = true;
@@ -21,7 +20,7 @@ bool render_player_sprite = true;
 bool render_other_entities = true;
 bool draw_grid = false;
 bool render_ground_texture = true;
-bool enable_entity_selection_by_player_position = false;
+bool enable_entity_selection_by_player_position = true;
 
 float render_distance = 230;
 float render_distance_32 = 10; // for 32x32 tiles
@@ -310,7 +309,7 @@ void render_ui(){
 							Vector2 justified = v2_sub(justified, v2_divf(tooltip_metrics.functional_size, 2));
 							// Vector2 justified = v2_sub(tooltip_text_pos, tooltip_metrics.visual_pos_min);
 							xform_tooltip = m4_translate(xform_tooltip, v3(tooltip_size.x * 0.5, tooltip_size.y - 5, 0));
-							xform_tooltip = m4_translate(xform_tooltip, v3(justified.x, justified.y, 0));
+							// xform_tooltip = m4_translate(xform_tooltip, v3(justified.x, justified.y, 0));
 							draw_text_xform(font, item_name, font_height, xform_tooltip, v2(0.1, 0.1), COLOR_WHITE);
 							// draw_text(font, item_name, font_height, justified, v2(0.1, 0.1), COLOR_RED);
 
@@ -1890,33 +1889,34 @@ void render_entities(World* world) {
 
 				case ARCH_portal:{
 					{
-						// frustrum culling
-						if (entity_dist_from_player <= render_distance){
-							for (int i = 0; i < en->biome_count; i++) {
-								BiomeID portal_biome_id = en->biome_ids[i];
-								if (portal_biome_id == world->dimension->current_biome_id){
-									// printf("Drawing sprite at biome = %s\t", get_biome_data_from_id(portal_biome_id).name);
-									// printf("portal destination id: %d\n", en->portal_data.destination);
-									Sprite* sprite = get_sprite(en->sprite_id);
-									Matrix4 xform = m4_identity;
+						// // frustrum culling
+						// if (entity_dist_from_player <= render_distance){
+						// 	for (int i = 0; i < en->biome_count; i++) {
+						// 		BiomeID portal_biome_id = en->biome_ids[i];
+						// 		if (portal_biome_id == world->dimension->current_biome_id){
+						// 			// printf("Drawing sprite at biome = %s\t", get_biome_data_from_id(portal_biome_id).name);
+						// 			// printf("portal destination id: %d\n", en->portal_data.destination);
+						// 			Sprite* sprite = get_sprite(en->sprite_id);
+						// 			Matrix4 xform = m4_identity;
 
-									xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
+						// 			xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
 
-									// center sprite
-									xform = m4_translate(xform, v3(sprite->image->width * -0.5, sprite->image->height * -0.5, 0));
+						// 			// center sprite
+						// 			xform = m4_translate(xform, v3(sprite->image->width * -0.5, sprite->image->height * -0.5, 0));
 
-									// draw sprite
-									draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
+						// 			// draw sprite
+						// 			draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
 
-								if (IS_DEBUG){
-									Matrix4 xform_debug = m4_identity;
-									xform_debug = m4_translate(xform_debug, v3(en->pos.x, en->pos.y, 0));
-									draw_rect_xform(xform_debug, v2(1,1), COLOR_RED);
-								}
+						// 		if (IS_DEBUG){
+						// 			Matrix4 xform_debug = m4_identity;
+						// 			xform_debug = m4_translate(xform_debug, v3(en->pos.x, en->pos.y, 0));
+						// 			draw_rect_xform(xform_debug, v2(1,1), COLOR_RED);
+						// 		}
 
-								}
-							}
-						}
+						// 		}
+						// 	}
+						// }
+						printf("RENDERING PORTAL IS COMMENTED\n");
 					}
 				} break;
 
@@ -2123,7 +2123,7 @@ int entry(int argc, char **argv)
 	window.force_topmost = false;
 	window.allow_resize = false;
 
-	// window.enable_vsync = true;
+	window.enable_vsync = true;
 
 	// Memory
 	world = alloc(get_heap_allocator(), sizeof(World));
@@ -2233,6 +2233,13 @@ int entry(int argc, char **argv)
 			textures[TEXTURE_TILE_sand] = (Texture){ .image=load_image_from_disk(STR("res/textures/tileset/sand.png"), get_heap_allocator())};
 		// 
 
+		// :Load buildings
+			// buildings[BUILDING_house] = (BuildingData){ .image=load_image_from_disk(STR("res/sprites/house1.png"), get_heap_allocator())};
+			sprites[SPRITE_BUILDING_house] = (Sprite){ .image=load_image_from_disk(STR("res/sprites/house2.png"), get_heap_allocator())};
+
+
+		// 
+
 		// :Load audio
 			Audio_Source hit_metal1, hit_metal2, rock_breaking1, swing_slow, swing_fast;
 			audioFiles[AUDIO_hit_metal1] = (Audio){.name=STR("Hit metal 1"),.ok=audio_open_source_load(&hit_metal1, STR("res/sounds/hit_metal1.wav"), get_heap_allocator()),.path=STR("res/sounds/hit_metal1.wav"),.source=hit_metal1};
@@ -2307,6 +2314,13 @@ int entry(int argc, char **argv)
 	#if defined(DEV_TESTING)
 	// test adding workstations to world
 	{
+		// House:
+		{
+			load_chunk_with_offset(world->dimension, v2(0,0));
+			Entity* en = entity_create_to_chunk(world->dimension->chunks[256][256]);
+			setup_building(en, BUILDING_house);
+			en->pos = v2(255, 255);
+		}
 		// FURNACE:
 		{
 			// Entity* en = entity_create();
@@ -2346,17 +2360,35 @@ int entry(int argc, char **argv)
 	// Workstation resource setup
 	setup_all_workstation_resources();
 
+	setup_all_building_resources();
+
 
 	// crafting & smelting recipes setup
 	setup_all_recipes();
+	setup_all_tools();
 
 	// setup audio
-	setup_audio_player();
-	Audio_Playback_Config audio_config = {0};
-	audio_config.volume                = 1.0;
-	audio_config.playback_speed        = 1.0;
-	audio_config.enable_spacialization = true;
-	audio_config.position_ndc          = v3(0, 0, 0);
+	// setup_audio_player();
+	// Audio_Playback_Config audio_config = {0};
+	// Audio_Playback_Config audio_config = {};
+	// audio_config.volume                = 0.1;
+	// audio_config.playback_speed        = 1.0;
+	// audio_config.enable_spacialization = true;
+	// audio_config.position_ndc          = v3(0, 0, 0);
+
+	Audio_Playback_Config audio_config = {
+		.enable_spacialization = true,
+		.playback_speed = 1.0,
+		.volume = 1.0,
+		.position_ndc = v3(0, 0, 0)
+	};
+	
+	Audio_Playback_Config audio_config_player = {
+		.enable_spacialization = true,
+		.playback_speed = 1.0,
+		.volume = 1.0,
+		.position_ndc = v3(0, 0, 0)
+	};
 
 	// spawning
 	// BiomeData temp_data = get_biome_data_from_id(world->dimension->current_biome_id);
@@ -2484,9 +2516,19 @@ int entry(int argc, char **argv)
 
 		chunk_manager();
 
-		Chunk* player_chunk = get_player_chunk();
+		// Chunk* player_chunk = get_player_chunk();
+		player_chunk = get_player_chunk();
 
-		if (IS_DEBUG) draw_rect(player_chunk->pos_in_world, v2(CHUNK_SIZE, CHUNK_SIZE), v4(0, 0, 1, 0.5));
+		// if (IS_DEBUG) draw_rect(player_chunk->pos_in_world, v2(CHUNK_SIZE, CHUNK_SIZE), v4(0, 0, 1, 0.5));
+
+		// if (IS_DEBUG){
+		// 	if (player_chunk->has_been_loaded){
+		// 		draw_rect(player_chunk->pos_in_world, v2(CHUNK_SIZE, CHUNK_SIZE), v4(0, 1, 0, 0.5));
+		// 	}
+		// 	else{
+		// 		draw_rect(player_chunk->pos_in_world, v2(CHUNK_SIZE, CHUNK_SIZE), v4(1, 0, 0, 0.5));
+		// 	}
+		// }
 
 
 		if (world->ux_state != UX_nil) world_frame.hover_consumed = true;
@@ -2618,12 +2660,19 @@ int entry(int argc, char **argv)
 			float smallest_dist = 9999999;
 			float entity_selection_radius = 10.0f;
 
-			for (int i = 0; i < world->dimension->entity_count; i++){
-				Entity* en = &world->dimension->entities[i];
+			// for (int i = 0; i < world->dimension->entity_count; i++){
+			for (int i = 0; i < player_chunk->entity_count; i++){
+
+				// Entity* en = &world->dimension->entities[i];
+				Entity* en = &player_chunk->entities[i];
+				
 				if (en->is_valid){
 					if (en->arch == ARCH_portal || en->arch == ARCH_workstation){ // #portal or #workstation
+
 						float dist = fabsf(v2_dist(en->pos, get_player_pos()));
+
 						if (dist < entity_selection_radius){
+
 							if (!world_frame.selected_entity || (dist < smallest_dist)){
 								// printf("PORTAL SELECTED\n");
 								// printf("%.1f, %.1f\n", en->pos.x, en->pos.y);
@@ -2994,9 +3043,12 @@ int entry(int argc, char **argv)
 
 					// swing sound if tool is selected
 					switch (item_in_hand->tool_id){
-						case TOOL_pickaxe:{play_one_audio_clip(audioFiles[AUDIO_swing_fast].path);}break;
-						case TOOL_axe:{play_one_audio_clip(audioFiles[AUDIO_swing_slow].path);}break;
-						case TOOL_shovel:{play_one_audio_clip(audioFiles[AUDIO_swing_slow].path);}break;
+						// case TOOL_pickaxe:{play_one_audio_clip(audioFiles[AUDIO_swing_fast].path);}break;
+						// case TOOL_axe:{play_one_audio_clip(audioFiles[AUDIO_swing_slow].path);}break;
+						// case TOOL_shovel:{play_one_audio_clip(audioFiles[AUDIO_swing_slow].path);}break;
+						case TOOL_pickaxe: play_one_audio_clip_with_config(audioFiles[AUDIO_swing_fast].path, audio_config_player); break;
+						case TOOL_axe: play_one_audio_clip_with_config(audioFiles[AUDIO_swing_slow].path, audio_config_player); break;
+						case TOOL_shovel: play_one_audio_clip_with_config(audioFiles[AUDIO_swing_slow].path, audio_config_player); break;
 						default:{printf("Failed to play specific audio. toolID = %d\n", item_in_hand->tool_id);}break;		// hopefully this won't cause a crash. Because of trying to print tool_id if selected_item has no tool_id
 					}
 				}
@@ -3016,7 +3068,7 @@ int entry(int argc, char **argv)
 					switch (selected_en->arch) {
 						case ARCH_tree: {	// |------- TREE -------|
 							{
-								if (item_in_hand->arch == ARCH_tool && item_in_hand->tool_id == TOOL_axe){
+								if (item_in_hand->tool_id == TOOL_axe){
 
 									// play_one_audio_clip_at_position(audioFiles[AUDIO_hit_wood1].path, audio_pos);
 
@@ -3036,7 +3088,7 @@ int entry(int argc, char **argv)
 
 						case ARCH_rock: {	// |------- ROCK -------|
 							{
-								if (item_in_hand->arch == ARCH_tool && item_in_hand->tool_id == TOOL_pickaxe){
+								if (item_in_hand->tool_id == TOOL_pickaxe){
 
 									// play_one_audio_clip_at_position(audioFiles[AUDIO_hit_metal1].path, audio_pos);
 									play_one_audio_clip_with_config(audioFiles[AUDIO_hit_metal1].path, audio_config);
@@ -3067,14 +3119,17 @@ int entry(int argc, char **argv)
 
 						case ARCH_ore: {	// |------- ORES -------|
 							{
-								if (item_in_hand->arch == ARCH_tool && item_in_hand->tool_id == TOOL_pickaxe){
+								if (item_in_hand->tool_id == TOOL_pickaxe){
 									// play_one_audio_clip_at_position(audioFiles[AUDIO_hit_metal1].path, audio_pos);
 									play_one_audio_clip_with_config(audioFiles[AUDIO_hit_metal1].path, audio_config);
 									selected_en->health -= world->player->damage;
 									if (selected_en->health <= 0){
+
+										// create entity for item
 										Entity* en = entity_create();
 										setup_item(en, selected_en->item_id);
 										en->pos = selected_en->pos;
+
 										allow_destroy = true;
 										// play_one_audio_clip_at_position(audioFiles[AUDIO_rock_breaking1].path, audio_pos);
 										play_one_audio_clip_with_config(audioFiles[AUDIO_rock_breaking1].path, audio_config);
@@ -3117,7 +3172,7 @@ int entry(int argc, char **argv)
 					if (item_in_hand){
 						// |------- SHOVEL -------|
 						// #portal
-						if (item_in_hand->arch == ARCH_tool && item_in_hand->tool_id == TOOL_shovel){
+						if (item_in_hand->tool_id == TOOL_shovel){
 							// if (world->dimension->current_biome_id == BIOME_forest){
 							if (world->dimension->id == DIM_overworld){
 								create_portal_to(DIM_cavern, true); 
@@ -3132,6 +3187,7 @@ int entry(int argc, char **argv)
 					entity_destroy(selected_en, player_chunk);
 					// entity_bin[entity_bin_size] = selected_en;
 					// entity_bin_size++;
+					player_chunk->has_been_modified = true;
 				}
 			}
 		}
@@ -3155,6 +3211,7 @@ int entry(int argc, char **argv)
 
 						case ARCH_portal:{ // #portal
 							{
+								printf("portal clicked ('f')\n");
 								if (selected_en->portal_data.enabled){
 									change_dimensions(selected_en->portal_data.dim_destination, selected_en->pos);
 								}
@@ -3291,6 +3348,18 @@ int entry(int argc, char **argv)
 			}
 			else{
 				IS_DEBUG = true;
+			}
+		}
+
+		if (is_key_just_pressed('Q')){
+			{
+				InventoryItemData* item = item_in_hand;
+				if (item){
+					Vector2 pos = get_player_pos();
+					pos.y -= 20;
+					spawn_item_to_world(*item, pos);
+					delete_item_from_inventory(item->item_id, item->amount);
+				}
 			}
 		}
 

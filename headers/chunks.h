@@ -165,7 +165,7 @@ Entity* entity_create_to_chunk(Chunk* chunk) {
     //                 setup_twig(en);
     //                 break;
     //             case ARCH_ore:
-    //                 // setup_ore(en, biome); // Adjust this for ore-specific setups
+    //                 // setup_ore(en, biome); // Adjust this for ore-specific setup's
     //                 break;
     //             case ARCH_mushroom:
     //                 setup_mushroom(en);
@@ -283,7 +283,12 @@ void load_chunk(DimensionData* dimension, Vector2 pos) {
             }
         }
     }
+}
 
+void load_chunk_with_offset(DimensionData* dimension, Vector2 pos){
+    pos.x += CHUNK_OFFSET_X;
+    pos.y += CHUNK_OFFSET_Y;
+    load_chunk(dimension, pos);
 }
 
 void unload_chunk(DimensionData* dimension, Vector2 pos) {
@@ -295,12 +300,19 @@ void unload_chunk(DimensionData* dimension, Vector2 pos) {
 
     if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
         if (dimension->chunks[x][y] != NULL) {
-            total_entity_count -= dimension->chunks[x][y]->entity_count;
-            dealloc(get_heap_allocator(), dimension->chunks[x][y]);
-            dimension->chunks[x][y] = NULL;
-            world->dimension->chunk_count--;
 
-            printf(" UN-Loaded chunk[%d][%d]\n", x, y);
+            if (dimension->chunks[x][y]->has_been_modified == true){
+                // save chunk to disc
+            }
+
+            else{ // this else is temp. remove it when saving chunks is working
+                total_entity_count -= dimension->chunks[x][y]->entity_count;
+                dealloc(get_heap_allocator(), dimension->chunks[x][y]);
+                dimension->chunks[x][y] = NULL;
+                world->dimension->chunk_count--;
+
+                printf(" UN-Loaded chunk[%d][%d]\n", x, y);
+            }
         }
     }
 }
@@ -385,13 +397,45 @@ void render_chunk_ground(){
                     assert(1==0, "PERKELE\n");
                 }
 
+                if (IS_DEBUG){
+                    if (chunk->has_been_modified) ground_color = v4(0, 1, 0, 1);
+                    else ground_color = v4(1, 0, 0, 1);
+                }
+
                 Matrix4 xform = m4_identity;
                 xform = m4_translate(xform, v3(chunk_pos_world.x, chunk_pos_world.y, 0));
                 draw_image_xform(texture->image, xform, v2(CHUNK_SIZE, CHUNK_SIZE), ground_color);
+
             }
         }
     }
 }
+
+void sort_entities(int* indices, Entity* entities, int count) {
+	// sorts entities:
+	// primary sort: sort entities based on their rendering_prio value
+	// secondary sort: if rendering_prio is the same, sort based on their y coordinates in descending order
+
+	// printf("--> SORTER ENTITIES <--\n");
+
+    for (int i = 0; i < count - 1; i++) {
+        for (int j = 0; j < count - i - 1; j++) {
+            int prio1 = entities[indices[j]].rendering_prio;
+            int prio2 = entities[indices[j + 1]].rendering_prio;
+            int y1 = entities[indices[j]].pos.y;
+            int y2 = entities[indices[j + 1]].pos.y;
+
+            // Sort by rendering priority first (ascending order)
+            // If the priorities are equal, sort by y value (descending order)
+            if (prio1 > prio2 || (prio1 == prio2 && y1 < y2)) {
+                int temp = indices[j];
+                indices[j] = indices[j + 1];
+                indices[j + 1] = temp;
+            }
+        }
+    }
+}
+
 
 void render_chunk_entities(){
     for (int x = 0; x < WORLD_WIDTH; x++) {
@@ -399,10 +443,25 @@ void render_chunk_entities(){
             Chunk* chunk = world->dimension->chunks[x][y];
 
             if (chunk != NULL) {
+                int indices[chunk->entity_count];
+
+                if (ENTITIES_NEED_SORTING){
+                    // ENTITIES_NEED_SORTING = false;
+                    int entity_count = chunk->entity_count;
+                    // int indices[entity_count];
+                    for (int i = 0; i < entity_count; i++) {
+                        indices[i] = i;
+                    }
+
+                    sort_entities(indices, chunk->entities, entity_count);
+                }
 
                 // render chunk entities
                 for (int i = 0; i < chunk->entity_count; i++){
-                    Entity* en = &chunk->entities[i];
+                    int index = indices[i];
+                    Entity* en = &chunk->entities[index];
+
+                    // Entity* en = &chunk->entities[i];
                     if (en != NULL && en->is_valid){
 
                         // frustrum culling
@@ -438,11 +497,15 @@ void render_chunk_entities(){
                                     }
                                 } break;
 
+                                case ARCH_building: break;
+
                                 default:{
                                     {
-                                        if (en->arch == ARCH_item){
+
+                                        if (en->arch == ARCH_building){
                                             int asd = 0;
                                         }
+
                                         Sprite* sprite = get_sprite(en->sprite_id);
 
                                         Vector4 col = COLOR_WHITE;
@@ -466,6 +529,22 @@ void render_chunk_entities(){
                                         else draw_image_xform(sprite->image, xform, get_sprite_size(sprite), col);
                                     }
                                 }
+                            }
+
+                            if (en->arch == ARCH_building){
+                                Sprite* sprite = get_sprite(en->sprite_id);
+
+                                Vector4 col = COLOR_WHITE;
+                                if (en->col_adj) col = en->col_adj_val;
+
+                                Matrix4 xform = m4_identity;
+                                xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
+
+                                if (en->has_custom_rendering_size) draw_image_xform(sprite->image, xform, en->custom_rendering_size, col);
+                                else draw_image_xform(sprite->image, xform, get_sprite_size(sprite), col);
+
+                                // Range2f hitbox = en->hitbox;
+                                // draw_rect(v2(hitbox.min.x, hitbox.min.y), v2(hitbox.max.x, hitbox.max.y), COLOR_WHITE);
                             }
                         }
                     }
@@ -504,6 +583,8 @@ void chunk_debug_print(){
 }
 
 void chunk_manager(){
+
+    // TODO: maybe create a thing here where the chunks load / unload only when player x,y is multiplies of CHUNK_SIZE. this way they arent constantly running
 
     load_chunks_renderdistance();
 

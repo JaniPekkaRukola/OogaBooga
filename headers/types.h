@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #define DEV_TESTING
+bool IS_DEBUG = false;
 
 
 // GLOBALS
@@ -81,6 +82,8 @@
         ARCH_bush,
         ARCH_twig,
         ARCH_mushroom,
+
+        ARCH_building,
 
         ARCH_MAX,
     } EntityArchetype;
@@ -201,6 +204,8 @@
         SPRITE_CATEGORY_tools,
         SPRITE_CATEGORY_workstations,
 
+        SPRITE_BUILDING_house,
+
         // other
         SPRITE_portal0,
         SPRITE_portal1,
@@ -292,6 +297,13 @@
         WORKSTATION_MAX,
     } WorkStationID;
 
+    typedef enum BuildingID {
+        BUILDING_nil,
+
+        BUILDING_house,
+
+        BUILDING_MAX,
+    } BuildingID;
 
     typedef enum TextureID {
         TEXTURE_nil,
@@ -477,6 +489,14 @@
         int amount;
     } ItemAmount;
 
+    // :ToolData ------------------------>
+    typedef struct ToolData {
+        int durability;
+        int max_durability;
+        AudioID audio_hit;
+        AudioID audio_miss;
+    } ToolData;
+
     // :ItemData ------------------------>
     typedef struct ItemData {
         string name;
@@ -484,11 +504,14 @@
         EntityArchetype category;
         ItemAmount crafting_recipe[MAX_RECIPE_ITEMS];
         int crafting_recipe_count; // how many types of items in recipe ????? or output????
-        ToolID tool_id;
         SpriteID sprite_id;
         ItemID item_id;
+        ToolID tool_id;
+        ToolData tool_data;
         float cooking_time;
+        string tooltip;
     } ItemData;
+
 
     // :WorkstationData -------------------->
     typedef struct WorkstationData { 
@@ -506,6 +529,18 @@
         // health
         // etc
     } WorkstationData;
+
+    // :BuildingData ----------------------->
+    typedef struct BuildingData {
+        string name;
+        Gfx_Image* image;
+
+        Range2f hitbox;
+
+        // bool has_custom_size; // this is useless since entity already has custom sizing
+        // Vector2 custom_size; // this is useless since entity already has custom sizing
+    } BuildingData;
+
 
     // :Entity -------------------------->
     typedef struct Entity {
@@ -525,12 +560,14 @@
         WorkStationID workstation_id;
         ToolID tool_id;
         OreID ore_id;
-        BiomeID biome_ids[BIOME_MAX];	// all biomes where the entity can spawn
+        // BiomeID biome_ids[BIOME_MAX];	// all biomes where the entity can spawn
+        BuildingID building_id;
 
         // data
         PortalData portal_data;
         WorkstationData workstation_data;
         ItemData *current_crafting_item;
+        Range2f hitbox; // testing
 
         // booleans
         bool destroyable;
@@ -563,6 +600,7 @@
         Entity entities[MAX_CHUNK_ENTITIES];
 
         bool has_been_loaded;
+        bool has_been_modified; // if something has been done to the chunk and it needs to be saved
     } Chunk;
 
     // :WorldFrame ---------------------->
@@ -807,14 +845,6 @@
         float threshold_max;
     } Parallax;
 
-    // :ToolData ------------------------>
-    typedef struct ToolData {
-        string name;
-        string tooltip;
-        int durability;
-        int miningLevel;
-    } ToolData;
-
     // :Texture ------------------------->
     typedef struct Texture {
         Gfx_Image* image;
@@ -892,6 +922,7 @@
     Sprite sprites[SPRITE_MAX];
     Parallax parallaxes[PARALLAX_MAX];
     WorkstationData workstations[WORKSTATION_MAX];
+    // BuildingData buildings[BUILDING_MAX]; // this was temporarily moved to functions
     Texture textures[TEXTURE_MAX];
     pickup_text_animation pickup_texts[MAX_PICKUP_TEXTS];
     dim_change_animation animation_dim_change = {};
@@ -925,6 +956,7 @@
 
 // 
 
+Chunk* player_chunk; // this is in global for testing and debugging
 
 
 
