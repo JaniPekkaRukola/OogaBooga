@@ -57,5 +57,6 @@ typedef struct Context_Extra {
 // #include "oogabooga/examples/sanity_tests.c"
 
 // This is where you swap in your own project!
-#include "mytestgame.c"
+// #include "mytestgame.c"
+#include "sub_game.c"
 // #include "tilesystest.c"
