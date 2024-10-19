@@ -2065,15 +2065,16 @@ BuildingData buildings[MAX_BUILDING_COUNT];
 				{
 					biome->name = STR("Forest");
 					biome->id = BIOME_forest;
-					// biome->ground_texture = TEXTURE_TILE_forest;
-					biome->ground_texture = TEXTURE_TILE_grass;
-					biome->ground_color = col_forest;
+					// biome->ground_texture = TEXTURE_TILE_grass;
+					biome->ground_texture = TEXTURE_TILE_grass2;
+					// biome->ground_color = col_forest;
+					biome->ground_color = COLOR_WHITE;
 					biome->enabled = true;
 
 					// Setup spawntable
 					
 					// Trees --------------------------->
-					biome->spawn_trees = true;
+					biome->spawn_trees = false;
 
 						// PINE TREE
 						biome->spawn_table.entities[biome->spawn_table.entity_count++] = (Spawnable)
@@ -2191,7 +2192,8 @@ BuildingData buildings[MAX_BUILDING_COUNT];
 					biome->id = BIOME_pine_forest;
 					// biome->ground_texture = TEXTURE_TILE_forest;
 					biome->ground_texture = TEXTURE_TILE_grass;
-					biome->ground_color = col_pine;
+					// biome->ground_color = col_pine;
+					biome->ground_color = COLOR_WHITE;
 					biome->enabled = true;
 
 					// Setup spawntable
@@ -2298,8 +2300,9 @@ BuildingData buildings[MAX_BUILDING_COUNT];
 					biome->name = STR("Magical Forest");
 					biome->id = BIOME_magical_forest;
 					// biome->ground_texture = TEXTURE_TILE_forest;
-					biome->ground_texture = TEXTURE_TILE_grass;
-					biome->ground_color = col_magic;
+					biome->ground_texture = TEXTURE_TILE_moss;
+					// biome->ground_color = col_magic;
+					biome->ground_color = COLOR_WHITE;
 					// biome->ground_color = hex_to_rgba(0x111111ff);
 					// biome->ground_color = hex_to_rgba(0x111111ff);
 

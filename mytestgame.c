@@ -2228,8 +2228,9 @@ int entry(int argc, char **argv)
 			textures[TEXTURE_vignette_torch] = (Texture){ .image=load_image_from_disk(STR("res/textures/vignette_torch.png"), get_heap_allocator())};
 			textures[TEXTURE_torch_light] = (Texture){ .image=load_image_from_disk(STR("res/textures/torch_light.png"), get_heap_allocator())};
 			
-			textures[TEXTURE_TILE_forest] = (Texture){ .image=load_image_from_disk(STR("res/textures/tileset/tile_forest2.png"), get_heap_allocator())};
 			textures[TEXTURE_TILE_grass] = (Texture){ .image=load_image_from_disk(STR("res/textures/tileset/grass.png"), get_heap_allocator())};
+			textures[TEXTURE_TILE_grass2] = (Texture){ .image=load_image_from_disk(STR("res/textures/tileset/grass4.png"), get_heap_allocator())};
+			textures[TEXTURE_TILE_moss] = (Texture){ .image=load_image_from_disk(STR("res/textures/tileset/moss2.png"), get_heap_allocator())};
 			textures[TEXTURE_TILE_sand] = (Texture){ .image=load_image_from_disk(STR("res/textures/tileset/sand.png"), get_heap_allocator())};
 		// 
 

@@ -312,8 +312,9 @@ bool IS_DEBUG = false;
         TEXTURE_vignette_no_torch,
         TEXTURE_torch_light,
 
-        TEXTURE_TILE_forest,
         TEXTURE_TILE_grass,
+        TEXTURE_TILE_grass2,
+        TEXTURE_TILE_moss,
         TEXTURE_TILE_sand,
 
         TEXTURE_MAX,
