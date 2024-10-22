@@ -43,7 +43,7 @@ typedef enum SpriteID{
     SPRITE_nil,
 
     SPRITE_player,
-    // SPRITE_algae1,
+    SPRITE_algae1,
 
     SPRITE_MAX,
 } SpriteID;
@@ -53,14 +53,35 @@ typedef struct Sprite {
 } Sprite;
 Sprite sprites[SPRITE_MAX];
 
+typedef enum ItemID{
+    ITEM_nil,
+
+    ITEM_rock,
+    ITEM_algae,
+
+
+    ITEM_MAX,
+} ItemID;
+
+typedef struct ItemData{
+    string name;
+    int amount;
+    SpriteID sprite;
+    ItemID item_id;
+    string tooltip;
+} ItemData;
 
 typedef enum EntityID {
-    ENTITYID_nil,
+    ENTITY_nil,
 
     ENTITY_player,
+    ENTITY_item, // EntityID for all items
+    ENTITY_rock,
+    ENTITY_algae,
 
 
-    ENTITYID_MAX,
+
+    ENTITY_MAX,
 } EntityID;
 
 typedef struct Entity{
@@ -69,10 +90,13 @@ typedef struct Entity{
     Vector2 pos;
     SpriteID sprite;
 
+    bool is_item;
+    ItemID item_id;
 
-    // int health;
-    // bool is_destroyable;
-    // bool is_selectable;
+
+    int health;
+    bool is_destroyable;
+    bool is_selectable;
     // bool enabled;
     bool is_valid;
 } Entity;
@@ -96,6 +120,8 @@ typedef enum UXState{
 
     UX_MAX,
 } UXState;
+
+
 
 typedef struct World{
     int entity_count;
@@ -189,6 +215,33 @@ Entity* entity_create() {
     return entity_found;
 }
 
+void setup_entity(Entity* en, EntityID id){
+    switch (id){
+        case ENTITY_nil: break;
+
+        case ENTITY_algae:{
+            {
+                en->entity_id = id;
+                en->health = 1;
+                en->is_destroyable = true;
+                en->is_item = false;
+                en->is_selectable = true;
+                en->name = STR("Algae");
+                en->pos = v2(0, -100);
+                en->sprite = SPRITE_algae1;
+            }
+        } break;
+
+        default:{
+            printf("'Setup_entity' defaulted with id '%d'\n", id);
+            assert(1==0, "see print above!");
+        } break;
+    }
+
+    world->entities[world->entity_count++] = *en;
+
+}
+
 void setup_world(){
     world->entity_count = 0;
     // world->entities = alloc(get_heap_allocator(), sizeof(Entity) * MAX_ENTITY_COUNT);
@@ -264,6 +317,7 @@ void render_ui(){
 
 }
 
+// :: render entities
 void render_entities(){
 
     for (int i = 0; i < MAX_ENTITY_COUNT; i++){
@@ -286,9 +340,13 @@ void render_entities(){
 
                 default:{
                     {
+                        Sprite* sprite = get_sprite(en->sprite);
+
                         Matrix4 xform = m4_identity;
                         xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
-                        draw_rect_xform(xform, v2(10, 10), COLOR_BLACK);
+                        
+                        // draw_rect_xform(xform, v2(10, 10), COLOR_BLACK);
+                        draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
                     }
                 } break;
             }
@@ -310,7 +368,7 @@ int entry(int argc, char **argv){
     window.x = window.point_width * 0.5 + 150;
     window.x = window.point_height * 0.5 - 100;
 
-    window.clear_color = v4(1, 1, 1, 1);
+    window.clear_color = v4(0.8, 0.8, 1, 1);
     window.force_topmost = false;
     window.allow_resize = false;
     window.enable_vsync = true;
@@ -329,6 +387,7 @@ int entry(int argc, char **argv){
     // sprites[SPRITE_nil] = (Sprite){.image=load_image_from_disk(  STR(res_folder  ),get_heap_allocator())};
     sprites[SPRITE_nil] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%snil.png"), res_folder)   ,get_heap_allocator())};
     sprites[SPRITE_player] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%splayer.png"), res_folder)   ,get_heap_allocator())};
+    sprites[SPRITE_algae1] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%salgae1.png"), res_folder)   ,get_heap_allocator())};
 
 
 
@@ -349,6 +408,13 @@ int entry(int argc, char **argv){
 
     setup_world();
     setup_player();
+
+
+    // spawn entitites temp
+    {
+        Entity* en = entity_create();
+        setup_entity(en, ENTITY_algae);
+    }
 
 
     // Timing
