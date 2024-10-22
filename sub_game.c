@@ -1,4 +1,4 @@
-// Sub_game (19.10.2024)
+// AbyssoPhobia (19.10.2024)
 
 bool IS_DEBUG = false;
 
@@ -13,6 +13,9 @@ const float screen_height = 135.0;
 #define MAX_ENTITY_COUNT 512
 #define m4_identity m4_make_scale(v3(1, 1, 1))
 
+// keybinds
+char KEY_player_use = 'F';
+char KEY_toggle_inventory = KEY_TAB;
 
 // globals
 float64 delta_t;
@@ -20,7 +23,7 @@ float64 current_time;
 int fps = 0;
 Vector2 camera_pos = {0, 0};
 float view_zoom = 0.1875;   // view zoom ratio x (pixelart layer width / window width = 240 / 1280 = 0.1875)
-const char res_folder[9] = "res/sub/";
+const char res_folder[17] = "res/abyssophobia/";
 
 
 
@@ -385,9 +388,9 @@ int entry(int argc, char **argv){
 
     // ::Load
     // sprites[SPRITE_nil] = (Sprite){.image=load_image_from_disk(  STR(res_folder  ),get_heap_allocator())};
-    sprites[SPRITE_nil] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%snil.png"), res_folder)   ,get_heap_allocator())};
-    sprites[SPRITE_player] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%splayer.png"), res_folder)   ,get_heap_allocator())};
-    sprites[SPRITE_algae1] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%salgae1.png"), res_folder)   ,get_heap_allocator())};
+    sprites[SPRITE_nil] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%s/sprites/nil.png"), res_folder)   ,get_heap_allocator())};
+    sprites[SPRITE_player] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%s/sprites/player.png"), res_folder)   ,get_heap_allocator())};
+    sprites[SPRITE_algae1] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%s/sprites/algae1.png"), res_folder)   ,get_heap_allocator())};
 
 
 
@@ -454,7 +457,7 @@ int entry(int argc, char **argv){
         set_world_space();
 
 
-        // underwater
+        // oxygen
         if (world->player->player_en->pos.y < 0){
             world->player->oxygen -= world->player->oxygen_consumption;
             world->player->oxygen = clamp(world->player->oxygen, 0, 100);
@@ -510,7 +513,7 @@ int entry(int argc, char **argv){
 
 		// player_pos = player_pos + (input_axis * 10.0);
 
-		// if (world->player->is_running){ world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed_amount * delta_t)); }
+		// if (world->player->is_running){ worldx->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed_amount * delta_t)); }
 		// else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
         world->player->player_en->pos = v2_add(world->player->player_en->pos, v2_mulf(input_axis, player_walking_speed* delta_t));
 
