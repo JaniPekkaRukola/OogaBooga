@@ -158,6 +158,12 @@
 		log_error("Failed to get category sprite @ 'get_category_sprite'");
 		return get_sprite(SPRITE_nil);
     }
+
+
+	Background* get_background(BackgroundID id){
+		if (id <= 0 || id >= BACKGROUND_MAX) return &backgrounds[0];
+		return &backgrounds[id];
+	}
 	
 
 // 

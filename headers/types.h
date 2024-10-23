@@ -60,6 +60,15 @@ const s32 layer_world = 10;
         SPRITE_MAX,
     } SpriteID;
 
+    typedef enum BackgroundID{
+        BACKGROUND_nil,
+
+        BACKGROUND_hub,
+        // BACKGROUND_level_1,
+
+        BACKGROUND_MAX,
+    } BackgroundID;
+
     typedef enum UXState{
         UX_nil,
 
@@ -98,7 +107,13 @@ const s32 layer_world = 10;
     typedef struct Sprite {
         Gfx_Image* image;
     } Sprite;
-    Sprite sprites[SPRITE_MAX];
+
+
+    typedef struct Background{
+        Gfx_Image* image;
+        bool has_custom_size;
+        Vector2 custom_size;
+    } Background;
 
 
     typedef enum ItemID{
@@ -213,6 +228,9 @@ const s32 layer_world = 10;
 
     World* world = 0;
     WorldFrame world_frame;
+    Sprite sprites[SPRITE_MAX];
+    Background backgrounds[BACKGROUND_MAX];
+
 
     // workstation UI
     EntityID workbench_tab_category = ENTITY_nil;
