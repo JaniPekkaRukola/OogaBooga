@@ -47,8 +47,10 @@ const char res_folder[17] = "res/abyssophobia/";
         UX_nil,
 
         UX_gameplay,
+        UX_gameplay_hub,
         UX_map,
         UX_mainmenu,
+        UX_settings,
 
         UX_MAX,
     } UXState;
@@ -125,8 +127,13 @@ const char res_folder[17] = "res/abyssophobia/";
         Entity entities[MAX_ENTITY_COUNT];
         // Entity* player;
         Player* player;
-        // UXState ux_state;
+        UXState ux_state;
     } World;
+
+    typedef struct Range2f {
+        Vector2 min;
+        Vector2 max;
+    } Range2f;
 
 
 // 

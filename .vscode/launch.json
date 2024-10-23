@@ -13,6 +13,18 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "perkele_compile_and_run",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/cgame.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "Compile"
+    },
+    {
       "name": "Launch Release with MSVC Debugger",
       "type": "cppvsdbg",
       "request": "launch",

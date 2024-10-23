@@ -38,6 +38,58 @@
         draw_frame.camera_xform = world_frame.world_view;
     }
 
+    Vector2 get_mouse_pos_in_ndc() {
+		float mouse_x = input_frame.mouse_x;
+		float mouse_y = input_frame.mouse_y;
+		Matrix4 proj = draw_frame.projection;
+		Matrix4 view = draw_frame.camera_xform;
+		float window_w = window.width;
+		float window_h = window.height;
+
+		// Normalize the mouse coordinates
+		float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+		float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+
+		return (Vector2) {ndc_x, ndc_y};
+	}
+
+	Vector2 get_mouse_pos_in_world_space() {
+		float mouse_x = input_frame.mouse_x;
+		float mouse_y = input_frame.mouse_y;
+		Matrix4 proj = draw_frame.projection;
+		// Matrix4 view = draw_frame.view;  		// deprecated
+		Matrix4 view = draw_frame.camera_xform;
+		float window_w = window.width;
+		float window_h = window.height;
+
+		// Normalize the mouse coordinates
+		float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+		float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+
+		// Transform to world coordinates
+		Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);
+		world_pos = m4_transform(m4_inverse(proj), world_pos);
+		world_pos = m4_transform(view, world_pos);
+		// log("%f, %f", world_pos.x, world_pos.y);
+
+		// Return as 2D vector
+		return (Vector2){ world_pos.x, world_pos.y};
+	}
+
+	Vector2 get_mouse_pos_in_screen(){
+		// just returns the mouse position in screen
+		Vector2 pos = get_mouse_pos_in_ndc();
+		return v2(pos.x * (0.5 * screen_width) + (0.5 * screen_width), pos.y * (0.5 * screen_height) + (0.5 * screen_height));
+	}
+
+    bool range2f_contains(Range2f range, Vector2 v) {
+		return v.x >= range.min.x && v.x <= range.max.x && v.y >= range.min.y && v.y <= range.max.y;
+	}
+
+    Range2f quad_to_range(Draw_Quad quad) {
+		return (Range2f) {quad.bottom_left, quad.top_right};
+	}
+
 // 
 
 
