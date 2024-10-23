@@ -6,6 +6,8 @@
 const float screen_width = 240.0;
 const float screen_height = 135.0;
 
+#define MAX_RECIPE_ITEMS 8
+
 // font
 Gfx_Font* font;
 u32 font_height = 48;
@@ -18,6 +20,11 @@ Vector2 camera_pos = {0, 0};
 float view_zoom = 0.1875;   // view zoom ratio x (pixelart layer width / window width = 240 / 1280 = 0.1875)
 const char res_folder[17] = "res/abyssophobia/";
 
+// rendering layers
+const s32 layer_ui = 20;
+const s32 layer_workstation_ui = 15;
+const s32 layer_world = 10;
+
 
 // ENUMS --------------------------------------------->
 
@@ -28,6 +35,10 @@ const char res_folder[17] = "res/abyssophobia/";
         ENTITY_item, // EntityID for all items
         ENTITY_rock,
         ENTITY_algae,
+        ENTITY_workstation,
+
+        ENTITY_tool, // get rid of this. this is currently only used for categories inside workbench
+        
 
 
 
@@ -40,6 +51,12 @@ const char res_folder[17] = "res/abyssophobia/";
         SPRITE_player,
         SPRITE_algae1,
 
+        // categories
+        SPRITE_CATEGORY_items,
+        SPRITE_CATEGORY_all,
+        SPRITE_CATEGORY_tools,
+        SPRITE_CATEGORY_workstations,
+
         SPRITE_MAX,
     } SpriteID;
 
@@ -47,13 +64,23 @@ const char res_folder[17] = "res/abyssophobia/";
         UX_nil,
 
         UX_gameplay,
-        UX_gameplay_hub,
-        UX_map,
-        UX_mainmenu,
+        UX_workbench,
         UX_settings,
 
         UX_MAX,
     } UXState;
+
+    typedef enum GameState{
+        GAMESTATE_nil,
+
+        GAMESTATE_mainmenu, // self explanatory
+        GAMESTATE_hub,      // main island hub
+        GAMESTATE_level,    // diving
+        GAMESTATE_map,      // level selection
+        // GAMESTATE_pause, // ??????????
+
+        GAMESTATE_MAX,
+    } GameState;
 
 // 
 
@@ -84,14 +111,25 @@ const char res_folder[17] = "res/abyssophobia/";
         ITEM_MAX,
     } ItemID;
 
+    typedef struct ItemAmount {
+        ItemID id;
+        int amount;
+    } ItemAmount;
 
     typedef struct ItemData{
         string name;
         int amount;
-        SpriteID sprite;
+        SpriteID sprite_id;
         ItemID item_id;
+        EntityID id;
+        ItemAmount crafting_recipe[MAX_RECIPE_ITEMS];
+        int crafting_recipe_count; // how many types of items in recipe ????? or output
+        EntityID category;
+        float cooking_time;
         string tooltip;
+        bool valid;
     } ItemData;
+
 
 
     typedef struct Entity{
@@ -111,6 +149,23 @@ const char res_folder[17] = "res/abyssophobia/";
         bool is_valid;
     } Entity;
 
+    // :WorkstationData -------------------->
+    typedef struct WorkstationData { 
+        // EntityArchetype to_build;
+        EntityID to_build;
+        SpriteID sprite_id;
+        // WorkStationID workstation_id;
+        bool has_inventory;
+        // InventoryItemData inventory[ITEM_MAX];
+        ItemData *selected_crafting_item;
+        int crafting_queue;
+        float64 crafting_end_time;
+        Entity* en;
+        // display name
+        // cost
+        // health
+        // etc
+    } WorkstationData;
 
     typedef struct Player{
         Entity* player_en;
@@ -119,6 +174,14 @@ const char res_folder[17] = "res/abyssophobia/";
         float oxygen;
         float oxygen_consumption;   // ogygen consumption rate
         float oxygen_refill;        // oxygen refill rate
+
+        // inventory
+        int inventory_items_count;
+        ItemData inventory[ITEM_MAX];
+
+        bool inventory_ui_open;
+        WorkstationData* selected_workstation; // selected workstation || currently open workstation
+
     } Player;
 
 
@@ -128,7 +191,14 @@ const char res_folder[17] = "res/abyssophobia/";
         // Entity* player;
         Player* player;
         UXState ux_state;
+        GameState game_state;
+
+
+        Entity* open_crafting_station;
+        float workbench_alpha_target;
+        float workbench_alpha;
     } World;
+
 
     typedef struct Range2f {
         Vector2 min;
@@ -143,6 +213,17 @@ const char res_folder[17] = "res/abyssophobia/";
 
     World* world = 0;
     WorldFrame world_frame;
+
+    // workstation UI
+    EntityID workbench_tab_category = ENTITY_nil;
+    ItemData* selected_recipe_workbench = NULL;
+    ItemData* selected_recipe_furnace = NULL;
+    Matrix4 selected_recipe_xform;
+    bool is_recipe_selected = false;
+
+    // recipes
+    ItemData workbench_recipes[ITEM_MAX];
+    ItemData furnace_recipes[ITEM_MAX];
 
 // 
 

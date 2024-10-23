@@ -90,6 +90,31 @@
 		return (Range2f) {quad.bottom_left, quad.top_right};
 	}
 
+    Draw_Quad *draw_rect_with_border(Matrix4 xform_slot, Vector2 inside_size, float border_width, Vector4 slot_col, Vector4 border_col){
+		// draws a rect with borders
+		// input xfrom is the base xform with no border
+		// NOTE: if slot_col has alpha value of < 1, the border_color WILL push through underneath. See for yourself
+
+			Draw_Quad q = ZERO(Draw_Quad);
+			q.bottom_left  = v2(0,  0);
+			q.top_left     = v2(0,  inside_size.y);
+			q.top_right    = v2(inside_size.x, inside_size.y);
+			q.bottom_right = v2(inside_size.x, 0);
+			q.color = slot_col;
+			q.image = 0;
+			q.type = QUAD_TYPE_REGULAR;
+
+			draw_rect_xform(m4_translate(xform_slot, v3(border_width * -0.5, border_width * -0.5, 0)), v2(inside_size.x + border_width, inside_size.y + border_width), border_col);
+			Draw_Quad *quad = draw_quad_xform(q, xform_slot);
+
+			return quad;
+		// draw border
+		// draw_rect_xform(m4_translate(xform_slot, v3(border_width * -0.5, border_width * -0.5, 0)), v2(inside_size.x + border_width, inside_size.y + border_width), border_col);
+		// draw slot
+		// draw_rect_xform(xform_slot, v2(inside_size.y, inside_size.y), slot_col);
+    }
+	
+
 // 
 
 
@@ -101,6 +126,17 @@
         else return &sprites[id];
     }
 
+    // NOTE: this func is dumb as shit
+   	SpriteID get_sprite_from_itemID(ItemID item) {
+		switch (item) {
+
+            case ITEM_rock: return SPRITE_nil; break;
+            case ITEM_algae: return SPRITE_algae1; break;
+
+			default: {log_error("Error @ 'get_sprite_from_itemID' missing case\n"); return 0;} break;
+		}
+	}
+
     Vector2 get_sprite_size(Sprite* sprite) {
         if (sprite != NULL){
             return (Vector2) {sprite->image->width, sprite->image->height};
@@ -110,6 +146,19 @@
             return v2(0,0);
         }
     }
+
+    Sprite* get_category_sprite(EntityID id){
+		switch (id){
+			case ENTITY_nil:{  return get_sprite(SPRITE_CATEGORY_all); } break;
+			case ENTITY_item:{ return get_sprite(SPRITE_CATEGORY_items); } break;
+			case ENTITY_tool:{ return get_sprite(SPRITE_CATEGORY_tools); } break;
+			case ENTITY_workstation:{ return get_sprite(SPRITE_CATEGORY_workstations); } break;
+			default: {log_error("missing case @ 'get_category_sprite'\n");} break;
+		}
+		log_error("Failed to get category sprite @ 'get_category_sprite'");
+		return get_sprite(SPRITE_nil);
+    }
+	
 
 // 
 
@@ -166,7 +215,95 @@
         return world->player->player_en->pos;
     }
 
+    int get_player_inventory_item_count(ItemID item_id){
+		for (int i = 0; i < world->player->inventory_items_count; i++){
+			// InventoryItemData* item = &world->player->inventory[i];
+            ItemData* item = &world->player->inventory[i];
+			if (item->item_id == item_id){
+				return item->amount;
+			}
+		}
+		return 0;
+    }
+
+    int check_player_inventory_for_items(ItemID item, int count){
+		// checks if the player has enough (count) of items (item) in their inventory
+		// returns "true" if player has the items
+		// returns "false" if player doesn't have the items
+
+		for (int i = 0; i < world->player->inventory_items_count; i++){
+			// InventoryItemData* inventory_item = &world->player->inventory[i];
+            ItemData* inventory_item = &world->player->inventory[i];
+			if (inventory_item->item_id == item){
+				if (inventory_item->amount >= count){
+					return 1;
+				}
+			}
+		}
+		return 0;
+    }
+
+	void delete_item_from_inventory(ItemID item_id, int amount){
+		// printf("DELETED ITEM %d FROM INVENTORY\n", item_id);
+
+		for (int i = 0; i < ITEM_MAX; i++){
+			// InventoryItemData* inventory_item = &world->player->inventory[i];
+            ItemData* inventory_item = &world->player->inventory[i];
+			if (inventory_item->item_id == item_id){
+				if (inventory_item->amount > 0){
+					inventory_item->amount -= amount;
+				}
+				if (inventory_item->amount <= 0){
+					// dealloc(temp_allocator, &inventory_item); // prolly does none
+					world->player->inventory[i].name.count = 0;
+					world->player->inventory[i].name.data = NULL;
+					world->player->inventory[i].id = 0;
+					world->player->inventory[i].sprite_id = 0;
+					// world->player->inventory[i].tool_id = 0;
+					world->player->inventory[i].item_id = 0;
+					world->player->inventory[i].valid = 0;
+
+					// Shift items down to fill the empty slot
+					for (int j = i; j < ITEM_MAX - 1; j++) {
+						world->player->inventory[j] = world->player->inventory[j + 1];
+					}
+
+					// Clear the last slot after shifting
+					world->player->inventory[ITEM_MAX - 1].name.count = 0;
+					world->player->inventory[ITEM_MAX - 1].name.data = NULL;
+					world->player->inventory[ITEM_MAX - 1].id = 0;
+					world->player->inventory[ITEM_MAX - 1].sprite_id = 0;
+					// world->player->inventory[ITEM_MAX - 1].tool_id = 0;
+					world->player->inventory[ITEM_MAX - 1].item_id = 0;
+					world->player->inventory[ITEM_MAX - 1].valid = 0;
+
+					break;
+				}
+				break;
+			}
+		}
+	}
+	
+
+    void delete_recipe_items_from_inventory(ItemData recipe){
+		for (int i = 0; i < recipe.crafting_recipe_count; i++){
+			ItemAmount* item = &recipe.crafting_recipe[i];
+			delete_item_from_inventory(item->id, item->amount);
+		}
+    }
+
 // 
+
+// ::ITEM
+    string get_item_name(ItemID id){
+        return STR("asd");
+    }
+
+	
+
+// 
+
+
 
 
 // SETUPS -------------------------------------------->
