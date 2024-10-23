@@ -1,0 +1,52 @@
+project stats:
+
+- Project #1 ( Un-Titled project )
+    - status: on ice
+    - reason: overscoped, didn't plan enough and lost motivation :(
+    - current notable systems:
+        - inventory
+        - chests
+        - crafting
+        - recipe system
+        - loot_table system
+        - world generation
+            - procedural map generation
+            - biome assignment
+            - entity spawning
+        - sexy chunk system
+        - animation system
+        - dimension system
+    - scope:
+        - open world
+        - procedural generation
+        - crafting & upgrading
+        - collecting resources
+        - quests and npcs
+        - economy
+        - dimensions (caves and floating islands)
+        - buildings and towns with interios
+        - maybe enemies and bosses?
+
+    
+    - notes:
+        - I really overscoped the fck outta this proj. I wanted to try a bit of everything i guess. In hindsight that was the reason why I had to ice this
+        - Because I didn't properly plan (and define the scope) the project, i often had to rewrite and rename stuff. And with thousands of lines, it took way too long everytime.
+        - way too overscoped for a first game and solo dev proj.
+        - One cool thing is i had 262 144 chunks, and 68 719 476 736 pixels per world
+        - failure = !failure
+
+- Project #2 ( AbyssoPhobia )
+    - status: worked on
+    - current notable systems:
+        - not much as of 23.Oct.2024
+    - scope:
+        - level based
+        - collecting resources
+        - crafting & upgrading
+        - inventory management
+        - quests and npcs
+        - economy
+        - enemies and maybe bosses?
+        - buildings with interiors
+        - map with level selection
+        - maybe even a story
