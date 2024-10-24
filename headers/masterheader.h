@@ -1,8 +1,8 @@
 #ifndef MASTERHEADER_H
 #define MASTERHEADER_H
 
+#include "settings.h"
 #include "types.h"
 #include "functions.h"
-#include "settings.h"
 
 #endif

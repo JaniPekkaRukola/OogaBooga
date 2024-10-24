@@ -1092,7 +1092,7 @@ int entry(int argc, char **argv){
     window.clear_color = v4(0.8, 0.8, 1, 1);
     window.force_topmost = false;
     window.allow_resize = false;
-    window.enable_vsync = true;
+    window.enable_vsync = false;
 
     // init world
 	world = alloc(get_heap_allocator(), sizeof(World));
@@ -1151,6 +1151,9 @@ int entry(int argc, char **argv){
 			}
 		}
 	}
+
+	// WorldMap
+	Gfx_Image* worldmap = load_image_from_disk(sprint(get_temporary_allocator(), STR("%s/worldmap.png"), res_folder), get_heap_allocator());
 
     setup_world();
     setup_player();
@@ -1245,7 +1248,7 @@ int entry(int argc, char **argv){
             world_frame.world_projection = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
 
             // camera
-            Vector2 target_pos = world->player->player_en->pos;
+            Vector2 target_pos = world->player->en->pos;
             animate_v2_to_target(&camera_pos, target_pos, delta_t, 10.0f); // 4th value controls how smooth the camera transition is to the player (lower = slower)
 
             world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0)); // View zoom (zooms so pixel art is the correct size)
@@ -1259,7 +1262,7 @@ int entry(int argc, char **argv){
 
 			if (player_pos.y <= -300){
 				world->game_state = GAMESTATE_level;
-				world->player->player_en->pos = v2(0, 0);
+				world->player->en->pos = v2(0, 0);
 				camera_pos = target_pos;
 			}
 
@@ -1286,6 +1289,10 @@ int entry(int argc, char **argv){
                 world->ux_state = UX_workbench;
             }
 
+			// Sprint
+			if (is_key_down(KEY_SHIFT)){ world->player->is_running = true;}
+			else { world->player->is_running = false;}
+
 			// ::Player movement || ::Movement
             Vector2 input_axis = v2(0, 0);
             if (is_key_down('W')){input_axis.y += 1.0;}
@@ -1302,11 +1309,10 @@ int entry(int argc, char **argv){
 
             // player_pos = player_pos + (input_axis * 10.0);
 
-            // if (world->player->is_running){ worldx->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed_amount * delta_t)); }
-            // else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
-            world->player->player_en->pos = v2_add(world->player->player_en->pos, v2_mulf(input_axis, player_walking_speed* delta_t));
+			if (world->player->is_running){ world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t)); }
+			else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
 
-            // world->player->player_en->pos.y = clamp(world->player->player_en->pos.y, -100000, 0);
+            // world->player->en->pos.y = clamp(world->player->en->pos.y, -100000, 0);
 
 		}
 
@@ -1322,7 +1328,7 @@ int entry(int argc, char **argv){
             world_frame.world_projection = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
 
             // camera
-            Vector2 target_pos = world->player->player_en->pos;
+            Vector2 target_pos = world->player->en->pos;
             animate_v2_to_target(&camera_pos, target_pos, delta_t, 10.0f); // 4th value controls how smooth the camera transition is to the player (lower = slower)
 
             world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0)); // View zoom (zooms so pixel art is the correct size)
@@ -1337,7 +1343,7 @@ int entry(int argc, char **argv){
 
 
             // oxygen
-            if (world->player->player_en->pos.y < 0){
+            if (world->player->en->pos.y < 0){
                 world->player->oxygen -= world->player->oxygen_consumption;
                 world->player->oxygen = clamp(world->player->oxygen, 0, 100);
             }
@@ -1348,9 +1354,9 @@ int entry(int argc, char **argv){
 
 
 
-			if (player_pos.x <= -200){
+			if (player_pos.x <= -200 && player_pos.y >= -5){
 				world->game_state = GAMESTATE_hub;
-				world->player->player_en->pos = v2(0, 0);
+				world->player->en->pos = v2(0, 0);
 			}
 
 
@@ -1379,6 +1385,10 @@ int entry(int argc, char **argv){
                 world->ux_state = UX_workbench;
             }
 
+			// Sprint
+			if (is_key_down(KEY_SHIFT)){ world->player->is_running = true;}
+			else { world->player->is_running = false;}
+
             // ::Player movement || ::Movement
             Vector2 input_axis = v2(0, 0);
             if (is_key_down('W')){input_axis.y += 1.0;}
@@ -1395,14 +1405,28 @@ int entry(int argc, char **argv){
 
             // player_pos = player_pos + (input_axis * 10.0);
 
-            // if (world->player->is_running){ worldx->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed_amount * delta_t)); }
-            // else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
-            world->player->player_en->pos = v2_add(world->player->player_en->pos, v2_mulf(input_axis, player_walking_speed* delta_t));
+            if (world->player->is_running){ world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t)); }
+            else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
+            // world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed* delta_t));
 
-            world->player->player_en->pos.y = clamp(world->player->player_en->pos.y, -100000, 0);
+            world->player->en->pos.y = clamp(world->player->en->pos.y, -100000, 0);
 
         }
 
+		// ######################################################################################################################
+		// ::MAP
+		if (world->game_state == GAMESTATE_map){
+			set_screen_space();
+			Matrix4 xform = m4_identity;
+			xform = m4_translate(xform, v3(0, 0, 0));
+			// draw_image_xform(worldmap, xform, v2(worldmap->width, worldmap->height), COLOR_WHITE);
+			draw_image_xform(worldmap, xform, v2(screen_width, screen_height), COLOR_WHITE);
+		}
+
+
+
+		// ######################################################################################################################
+		// ::UNIVERSAL logic
 		if (IS_DEBUG){
 			printf("GAMESTATE = %d\n", world->game_state);
 		}
@@ -1415,6 +1439,11 @@ int entry(int argc, char **argv){
 		if (is_key_just_pressed('V')){
 			if (IS_DEBUG) IS_DEBUG = false;
 			else IS_DEBUG = true;
+		}
+
+		if (is_key_just_pressed('G')){
+			if (world->game_state != GAMESTATE_map) world->game_state = GAMESTATE_map;
+			else world->game_state = GAMESTATE_hub;
 		}
 
 		if (render_fps){

@@ -3,8 +3,7 @@
 
 
 #define MAX_ENTITY_COUNT 512
-const float screen_width = 240.0;
-const float screen_height = 135.0;
+
 
 #define MAX_RECIPE_ITEMS 8
 
@@ -17,7 +16,6 @@ float64 delta_t;
 float64 current_time;
 int fps = 0;
 Vector2 camera_pos = {0, 0};
-float view_zoom = 0.1875;   // view zoom ratio x (pixelart layer width / window width = 240 / 1280 = 0.1875)
 const char res_folder[17] = "res/abyssophobia/";
 
 // rendering layers
@@ -44,6 +42,16 @@ const s32 layer_world = 10;
 
         ENTITY_MAX,
     } EntityID;
+
+    typedef enum ItemID{
+        ITEM_nil,
+
+        ITEM_rock,
+        ITEM_algae,
+
+
+        ITEM_MAX,
+    } ItemID;
 
     typedef enum SpriteID{
         SPRITE_nil,
@@ -116,20 +124,11 @@ const s32 layer_world = 10;
     } Background;
 
 
-    typedef enum ItemID{
-        ITEM_nil,
-
-        ITEM_rock,
-        ITEM_algae,
-
-
-        ITEM_MAX,
-    } ItemID;
-
     typedef struct ItemAmount {
         ItemID id;
         int amount;
     } ItemAmount;
+
 
     typedef struct ItemData{
         string name;
@@ -164,6 +163,7 @@ const s32 layer_world = 10;
         bool is_valid;
     } Entity;
 
+
     // :WorkstationData -------------------->
     typedef struct WorkstationData { 
         // EntityArchetype to_build;
@@ -182,13 +182,18 @@ const s32 layer_world = 10;
         // etc
     } WorkstationData;
 
+
     typedef struct Player{
-        Entity* player_en;
+        Entity* en;
 
         int health;
         float oxygen;
         float oxygen_consumption;   // ogygen consumption rate
         float oxygen_refill;        // oxygen refill rate
+
+        bool is_running;
+        int walking_speed;
+        int running_speed;
 
         // inventory
         int inventory_items_count;

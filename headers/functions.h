@@ -218,7 +218,7 @@
 
 // ::PLAYER
     Vector2 get_player_pos(){
-        return world->player->player_en->pos;
+        return world->player->en->pos;
     }
 
     int get_player_inventory_item_count(ItemID item_id){
@@ -332,11 +332,14 @@
         // Player* player = world->player;
 
         world->player = alloc(get_heap_allocator(), sizeof(Player));
-        world->player->player_en = setup_player_en();
+        world->player->en = setup_player_en();
         world->player->health = 100;
         world->player->oxygen = 100;
         world->player->oxygen_consumption = 0.1;
         world->player->oxygen_refill = 0.2;
+		world->player->walking_speed = 100;
+		world->player->running_speed = 250;
+		world->player->is_running = false;
     }
 
 // 
