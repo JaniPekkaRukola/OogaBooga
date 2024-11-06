@@ -99,6 +99,15 @@ const s32 layer_world = 10;
         GAMESTATE_MAX,
     } GameState;
 
+    typedef enum LevelID{
+        LEVEL_nil,
+
+        LEVEL_1,
+        LEVEL_2,
+
+        LEVEL_MAX
+    } LevelID;
+
 // 
 
 // STRUCTS ------------------------------------------->
@@ -110,6 +119,13 @@ const s32 layer_world = 10;
         bool hover_consumed;
         // Entity* player;
     } WorldFrame;
+
+
+    typedef struct Level{
+        LevelID id;
+        Gfx_Image* level;
+        Gfx_Image* level_meta;
+    } Level;
 
 
     typedef struct Sprite {
@@ -213,6 +229,7 @@ const s32 layer_world = 10;
         UXState ux_state;
         GameState game_state;
 
+        Level level;
 
         Entity* open_crafting_station;
         float workbench_alpha_target;

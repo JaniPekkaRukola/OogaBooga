@@ -342,6 +342,29 @@
 		world->player->is_running = false;
     }
 
+	Level* levels[LEVEL_MAX];
+
+	Level* get_level(LevelID id){
+		if (id <= 0 || id >= LEVEL_MAX){
+			assert(1==0, "'get_level()' input id out of bounds");
+			return NULL;
+		}
+		else{
+			return levels[id];
+		}
+	}
+
+	void setup_levels(){
+		for (LevelID id = 0; id < LEVEL_MAX; id++){
+			Level* new_level = alloc(get_heap_allocator(), sizeof(Level));
+			new_level->id = id;
+			new_level->level = (Gfx_Image*)load_image_from_disk(sprint(get_temporary_allocator(), STR("%s/Levels/level_%d.png"), res_folder, id), get_heap_allocator());
+			new_level->level_meta = (Gfx_Image*)load_image_from_disk(sprint(get_temporary_allocator(), STR("%s/Levels/level_%d_meta.png"), res_folder, id), get_heap_allocator());
+			levels[id] = new_level;
+
+		}
+	}
+
 // 
 
 

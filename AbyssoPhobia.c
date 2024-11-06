@@ -2,6 +2,10 @@
 
 #include "headers/masterheader.h"
 
+int saatna = 1;
+bool saatnaan = false;
+
+
 
 void render_background(){
 
@@ -21,10 +25,28 @@ void render_background(){
 		// xform = m4_translate(xform, v3(0, 0, 0));
 		// draw_rect_xform(xform, v2(screen_width, screen_height), v4(0, 0.3, 1, 1));
 
-		Vector2 player_pos = get_player_pos();
-		Vector2 size = v2(800, 500);
+		// Vector2 player_pos = get_player_pos();
+		// Vector2 size = v2(800, 500);
 
-		draw_rect(v2(player_pos.x - (size.x * 0.5), -size.y), size, v4(0, 0.3, 0.8, 1));
+		// draw_rect(v2(player_pos.x - (size.x * 0.5), -size.y), size, v4(0, 0.3, 0.8, 1));
+
+		set_world_space();
+
+		Level* level = &world->level;
+		
+		if (!level || level == NULL || level->id == 0) return;
+
+		Vector2 size = v2(level->level->width, level->level->height);
+
+		Matrix4 xform = m4_identity;
+		xform = m4_translate(xform, v3(0, -size.y, 0));
+
+		draw_image_xform(level->level, xform, size, COLOR_WHITE);
+
+		if (IS_DEBUG){
+			draw_image_xform(level->level_meta, xform, size, COLOR_WHITE);
+		}
+
 	}
 }
 
@@ -1013,7 +1035,6 @@ void render_workstation_ui(UXState ux_state)
 	// 			}
 	// 		}
 
-			
 
 
 
@@ -1092,7 +1113,7 @@ int entry(int argc, char **argv){
     window.clear_color = v4(0.8, 0.8, 1, 1);
     window.force_topmost = false;
     window.allow_resize = false;
-    window.enable_vsync = false;
+    window.enable_vsync = true;
 
     // init world
 	world = alloc(get_heap_allocator(), sizeof(World));
@@ -1152,11 +1173,27 @@ int entry(int argc, char **argv){
 		}
 	}
 
+
+	// ::Load levels
+	CollisionBox* level_collision_box = NULL;
+	ResourceSpawn* level_resourcespawn = NULL;
+	LevelTransition* level_transition = NULL;
+
+	int num_collisions = 1;
+	int num_resources = 1;
+	int num_transitions = 1;
+
+
+	// parse_image("res/AbyssoPhobia/Levels/level_1_meta.png", &level_collision_box, &num_collisions, &level_resourcespawn, &num_resources, &level_transition, &num_transitions);
+
+	int test = 0;
+
 	// WorldMap
 	Gfx_Image* worldmap = load_image_from_disk(sprint(get_temporary_allocator(), STR("%s/worldmap.png"), res_folder), get_heap_allocator());
 
     setup_world();
     setup_player();
+	setup_levels();
 
 
     // spawn entitites temp
@@ -1262,6 +1299,7 @@ int entry(int argc, char **argv){
 
 			if (player_pos.y <= -300){
 				world->game_state = GAMESTATE_level;
+				world->level = *get_level(LEVEL_1);
 				world->player->en->pos = v2(0, 0);
 				camera_pos = target_pos;
 			}
@@ -1338,6 +1376,8 @@ int entry(int argc, char **argv){
 
 
             set_world_space();
+
+
 
 			Vector2 player_pos = get_player_pos();
 
@@ -1427,8 +1467,14 @@ int entry(int argc, char **argv){
 
 		// ######################################################################################################################
 		// ::UNIVERSAL logic
-		if (IS_DEBUG){
-			printf("GAMESTATE = %d\n", world->game_state);
+		
+		// if (IS_DEBUG){
+		// 	printf("GAMESTATE = %d\n", world->game_state);
+		// }
+
+		if (is_key_just_pressed('T')){
+			// load_level(LEVEL_1);
+			change_level(get_level(LEVEL_1));
 		}
 
 		// EXIT
@@ -1451,6 +1497,29 @@ int entry(int argc, char **argv){
 			draw_text(font, sprint(get_heap_allocator(), STR("%d"), fps), font_height, v2(0,screen_height-3), v2(0.1, 0.1), COLOR_RED);
 			set_world_space();
 		}
+
+
+		// Mousewheel ZOOM (debug)
+		// Selecting slots with mouse wheel
+		for (u64 i = 0; i < input_frame.number_of_events; i++) {
+			Input_Event e = input_frame.events[i];
+			switch (e.kind) {
+				case (INPUT_EVENT_SCROLL):
+				{
+					if (e.yscroll > 0){
+						if (is_key_down(KEY_CTRL)){view_zoom -= 0.03;}
+					}
+					else{
+						if (is_key_down(KEY_CTRL)){view_zoom += 0.03;}
+					}
+					break;
+				}
+				case (INPUT_EVENT_KEY):{break;}
+				case (INPUT_EVENT_TEXT):{break;}
+				default:{}break;
+			}
+		}
+
 
 		gfx_update();
 
