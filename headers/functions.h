@@ -324,6 +324,7 @@
         en->name = STR("PLAYER");
         en->pos = v2(0,0);
         en->sprite = SPRITE_player;
+		en->hitbox = range2f_make(v2(10, 10), v2(20, 20)); // this is wip
         return en;
     }
 
@@ -360,8 +361,11 @@
 			new_level->id = id;
 			new_level->level = (Gfx_Image*)load_image_from_disk(sprint(get_temporary_allocator(), STR("%s/Levels/level_%d.png"), res_folder, id), get_heap_allocator());
 			new_level->level_meta = (Gfx_Image*)load_image_from_disk(sprint(get_temporary_allocator(), STR("%s/Levels/level_%d_meta.png"), res_folder, id), get_heap_allocator());
-			levels[id] = new_level;
 
+			new_level->level_path = sprint(get_temporary_allocator(), STR("%s/Levels/level_%d.png"), res_folder, id);
+			new_level->level_meta_path = sprint(get_temporary_allocator(), STR("%s/Levels/level_%d_meta.png"), res_folder, id);
+
+			levels[id] = new_level;
 		}
 	}
 

@@ -4,7 +4,7 @@
 
 int saatna = 1;
 bool saatnaan = false;
-
+bool level_selected = false;
 
 
 void render_background(){
@@ -20,7 +20,7 @@ void render_background(){
 		else draw_image_xform(bg->image, xform, v2(bg->image->width, bg->image->height), COLOR_WHITE);
 	}
 
-	else if (world->game_state == GAMESTATE_level){
+	else if (world->game_state == GAMESTATE_level || world->game_state == GAMESTATE_editor){
 		// Matrix4 xform = m4_identity;
 		// xform = m4_translate(xform, v3(0, 0, 0));
 		// draw_rect_xform(xform, v2(screen_width, screen_height), v4(0, 0.3, 1, 1));
@@ -1108,7 +1108,9 @@ int entry(int argc, char **argv){
     window.point_height = 720;
 
     window.x = window.point_width * 0.5 + 150;
-    window.x = window.point_height * 0.5 - 100;
+    window.y = window.point_height * 0.5 - 100;
+	// window.x = 50;
+	// window.y = 50;
 
     window.clear_color = v4(0.8, 0.8, 1, 1);
     window.force_topmost = false;
@@ -1174,19 +1176,17 @@ int entry(int argc, char **argv){
 	}
 
 
-	// ::Load levels
-	CollisionBox* level_collision_box = NULL;
-	ResourceSpawn* level_resourcespawn = NULL;
-	LevelTransition* level_transition = NULL;
+	// // ::Load levels
+	// CollisionBox* level_collision_box = NULL;
+	// ResourceSpawn* level_resourcespawn = NULL;
+	// LevelTransition* level_transition = NULL;
 
-	int num_collisions = 1;
-	int num_resources = 1;
-	int num_transitions = 1;
+	// int num_collisions = 1;
+	// int num_resources = 1;
+	// int num_transitions = 1;
 
 
-	// parse_image("res/AbyssoPhobia/Levels/level_1_meta.png", &level_collision_box, &num_collisions, &level_resourcespawn, &num_resources, &level_transition, &num_transitions);
 
-	int test = 0;
 
 	// WorldMap
 	Gfx_Image* worldmap = load_image_from_disk(sprint(get_temporary_allocator(), STR("%s/worldmap.png"), res_folder), get_heap_allocator());
@@ -1194,6 +1194,18 @@ int entry(int argc, char **argv){
     setup_world();
     setup_player();
 	setup_levels();
+
+	LevelEditor editor;
+	init_level_editor(&editor);
+
+	// Level level_test = load_level(LEVEL_1);
+	// for (int i = 0; i < my_level.boundary_count; i++) {
+    // Segment seg = my_level.collision_boundaries[i];
+    // // Use `seg.start` and `seg.end` for collision detection
+	// }
+
+	// parse_image("res/AbyssoPhobia/Levels/level_1_meta.png", &level_collision_box, &num_collisions, &level_resourcespawn, &num_resources, &level_transition, &num_transitions);
+	// parse_image_meta(get_level(LEVEL_1));
 
 
     // spawn entitites temp
@@ -1211,7 +1223,8 @@ int entry(int argc, char **argv){
     view_zoom += 0.2;
 
     world->ux_state = UX_gameplay;
-    world->game_state = GAMESTATE_mainmenu;
+    // world->game_state = GAMESTATE_mainmenu;
+	world->game_state = GAMESTATE_editor;
 
 
     while (!window.should_close){
@@ -1453,6 +1466,108 @@ int entry(int argc, char **argv){
 
         }
 
+		if (world->game_state == GAMESTATE_editor){
+			set_screen_space();
+
+
+			if (!level_selected){
+				
+				Matrix4 xform = m4_identity;
+				xform = m4_translate(xform, v3(screen_width*0.5, screen_height * 0.5, 0));
+				draw_text_xform(font, STR("Level 1"), font_height, xform, v2(0.1, 0.1), COLOR_BLACK);
+				xform = m4_translate(xform, v3(50, 0, 0));
+				Draw_Quad* quad = draw_rect_xform(xform, v2(10, 10), COLOR_RED);
+
+				if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+					if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+						level_selected = true;
+						world->level = *get_level(LEVEL_1);
+					}
+				}
+
+			}
+			else{
+
+
+
+				world_frame = (WorldFrame){0};
+
+				// :Frame :update
+				draw_frame.enable_z_sorting = true;
+				world_frame.world_projection = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
+
+				// camera
+				Vector2 target_pos = world->player->en->pos;
+				animate_v2_to_target(&camera_pos, target_pos, delta_t, 10.0f); // 4th value controls how smooth the camera transition is to the player (lower = slower)
+
+				world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0)); // View zoom (zooms so pixel art is the correct size)
+				world_frame.world_view = m4_mul(world_frame.world_view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0)));
+				world_frame.world_view = m4_mul(world_frame.world_view, m4_make_scale(v3(view_zoom, view_zoom, 1.0)));
+
+
+
+
+				set_world_space();
+
+				render_background();
+				render_surfaceLine();
+
+
+				handle_editor_input(&editor, delta_t);
+
+				render_level_editor(&editor);
+
+
+				Vector2 player_pos = get_player_pos();
+
+
+				for (u64 i = 0; i < input_frame.number_of_events; i++) {
+					Input_Event e = input_frame.events[i];
+					switch (e.kind) {
+						case (INPUT_EVENT_SCROLL):
+						{
+							if (e.yscroll > 0){
+								view_zoom -= 0.03;
+							}
+							else{
+								view_zoom += 0.03;
+							}
+							break;
+						}
+						case (INPUT_EVENT_KEY):{break;}
+						case (INPUT_EVENT_TEXT):{break;}
+						default:{}break;
+					}
+				}
+
+				// Sprint
+				if (is_key_down(KEY_SHIFT)){ world->player->is_running = true;}
+				else { world->player->is_running = false;}
+
+				// ::Player movement || ::Movement
+				Vector2 input_axis = v2(0, 0);
+				if (is_key_down('W')){input_axis.y += 1.0;}
+				if (is_key_down('A')){input_axis.x -= 1.0;}
+				if (is_key_down('S')){input_axis.y -= 1.0;}
+				if (is_key_down('D')){input_axis.x += 1.0;}
+
+
+				// normalize
+				input_axis = v2_normalize(input_axis);
+
+
+				if (world->player->is_running){ world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t)); }
+				else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
+
+				world->player->en->pos.y = clamp(world->player->en->pos.y, -100000, 0);
+			}
+
+			set_screen_space();
+			draw_text_xform(font, STR("LEVEL EDITOR"), font_height, m4_translate(m4_identity, v3(screen_width * 0.5, screen_height-10, 0)), v2(0.1, 0.1), COLOR_RED);
+
+		}
+
 		// ######################################################################################################################
 		// ::MAP
 		if (world->game_state == GAMESTATE_map){
@@ -1467,14 +1582,14 @@ int entry(int argc, char **argv){
 
 		// ######################################################################################################################
 		// ::UNIVERSAL logic
-		
+
 		// if (IS_DEBUG){
 		// 	printf("GAMESTATE = %d\n", world->game_state);
 		// }
 
 		if (is_key_just_pressed('T')){
 			// load_level(LEVEL_1);
-			change_level(get_level(LEVEL_1));
+			// change_level(get_level(LEVEL_1));
 		}
 
 		// EXIT

@@ -561,4 +561,4 @@ void pop_window_scissor() { pop_window_scissor_in_frame(&draw_frame); }
 #define COLOR_BLUE  ((Vector4){0.0, 0.0, 1.0, 1.0})
 #define COLOR_WHITE ((Vector4){1.0, 1.0, 1.0, 1.0})
 #define COLOR_BLACK ((Vector4){0.0, 0.0, 0.0, 1.0})
-
+#define COLOR_YELLOW ((Vector4){1.0, 1.0, 0.0, 1.0})
