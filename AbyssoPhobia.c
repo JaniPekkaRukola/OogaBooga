@@ -1223,8 +1223,8 @@ int entry(int argc, char **argv){
     view_zoom += 0.2;
 
     world->ux_state = UX_gameplay;
-    // world->game_state = GAMESTATE_mainmenu;
-	world->game_state = GAMESTATE_editor;
+    world->game_state = GAMESTATE_mainmenu;
+	// world->game_state = GAMESTATE_editor;
 
 
     while (!window.should_close){
@@ -1371,6 +1371,14 @@ int entry(int argc, char **argv){
 		// ::LEVEL || ::GAMEPLAY
         if (world->game_state == GAMESTATE_level){
 
+			int max_points = 100;
+			// Vector2* loaded_points = alloc(get_heap_allocator(), max_points * sizeof(Vector2));
+			Vector2 loaded_points[max_points];
+			bool suc = load_points_from_file((Vector2*)loaded_points, max_points, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_test.txt"), get_heap_allocator());
+			assert(suc, "failed");
+
+			printf("Loaded points [0] = %f, %f\n", loaded_points[0].x, loaded_points[0].y);
+			printf("Loaded points [1] = %f, %f\n", loaded_points[1].x, loaded_points[1].y);
 
             world_frame = (WorldFrame){0};
 
@@ -1473,10 +1481,10 @@ int entry(int argc, char **argv){
 			if (!level_selected){
 				
 				Matrix4 xform = m4_identity;
-				xform = m4_translate(xform, v3(screen_width*0.5, screen_height * 0.5, 0));
+				xform = m4_translate(xform, v3(screen_width * 0.5 - 15, screen_height * 0.5, 0));
 				draw_text_xform(font, STR("Level 1"), font_height, xform, v2(0.1, 0.1), COLOR_BLACK);
-				xform = m4_translate(xform, v3(50, 0, 0));
-				Draw_Quad* quad = draw_rect_xform(xform, v2(10, 10), COLOR_RED);
+				xform = m4_translate(xform, v3(15, -1, 0));
+				Draw_Quad* quad = draw_rect_xform(xform, v2(5, 5), COLOR_RED);
 
 				if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
 					if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
@@ -1498,8 +1506,9 @@ int entry(int argc, char **argv){
 				world_frame.world_projection = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
 
 				// camera
-				Vector2 target_pos = world->player->en->pos;
-				animate_v2_to_target(&camera_pos, target_pos, delta_t, 10.0f); // 4th value controls how smooth the camera transition is to the player (lower = slower)
+				// Vector2 target_pos = world->player->en->pos;
+				// animate_v2_to_target(&camera_pos, target_pos, delta_t, 10.0f); // 4th value controls how smooth the camera transition is to the player (lower = slower)
+				camera_pos = world->player->en->pos;
 
 				world_frame.world_view = m4_make_scale(v3(1.0, 1.0, 1.0)); // View zoom (zooms so pixel art is the correct size)
 				world_frame.world_view = m4_mul(world_frame.world_view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0)));
@@ -1514,57 +1523,57 @@ int entry(int argc, char **argv){
 				render_surfaceLine();
 
 
+				render_level_editor(&editor);
 				handle_editor_input(&editor, delta_t);
 
-				render_level_editor(&editor);
 
 
-				Vector2 player_pos = get_player_pos();
+				// Vector2 player_pos = get_player_pos();
 
 
-				for (u64 i = 0; i < input_frame.number_of_events; i++) {
-					Input_Event e = input_frame.events[i];
-					switch (e.kind) {
-						case (INPUT_EVENT_SCROLL):
-						{
-							if (e.yscroll > 0){
-								view_zoom -= 0.03;
-							}
-							else{
-								view_zoom += 0.03;
-							}
-							break;
-						}
-						case (INPUT_EVENT_KEY):{break;}
-						case (INPUT_EVENT_TEXT):{break;}
-						default:{}break;
-					}
-				}
+				// for (u64 i = 0; i < input_frame.number_of_events; i++) {
+				// 	Input_Event e = input_frame.events[i];
+				// 	switch (e.kind) {
+				// 		case (INPUT_EVENT_SCROLL):
+				// 		{
+				// 			if (e.yscroll > 0){
+				// 				view_zoom -= 0.03;
+				// 			}
+				// 			else{
+				// 				view_zoom += 0.03;
+				// 			}
+				// 			break;
+				// 		}
+				// 		case (INPUT_EVENT_KEY):{break;}
+				// 		case (INPUT_EVENT_TEXT):{break;}
+				// 		default:{}break;
+				// 	}
+				// }
 
-				// Sprint
-				if (is_key_down(KEY_SHIFT)){ world->player->is_running = true;}
-				else { world->player->is_running = false;}
+				// // Sprint
+				// if (is_key_down(KEY_SHIFT)){ world->player->is_running = true;}
+				// else { world->player->is_running = false;}
 
-				// ::Player movement || ::Movement
-				Vector2 input_axis = v2(0, 0);
-				if (is_key_down('W')){input_axis.y += 1.0;}
-				if (is_key_down('A')){input_axis.x -= 1.0;}
-				if (is_key_down('S')){input_axis.y -= 1.0;}
-				if (is_key_down('D')){input_axis.x += 1.0;}
-
-
-				// normalize
-				input_axis = v2_normalize(input_axis);
+				// // ::Player movement || ::Movement
+				// Vector2 input_axis = v2(0, 0);
+				// if (is_key_down('W')){input_axis.y += 1.0;}
+				// if (is_key_down('A')){input_axis.x -= 1.0;}
+				// if (is_key_down('S')){input_axis.y -= 1.0;}
+				// if (is_key_down('D')){input_axis.x += 1.0;}
 
 
-				if (world->player->is_running){ world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t)); }
-				else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
+				// // normalize
+				// input_axis = v2_normalize(input_axis);
 
-				world->player->en->pos.y = clamp(world->player->en->pos.y, -100000, 0);
+
+				// if (world->player->is_running){ world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t)); }
+				// else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
+
+				// world->player->en->pos.y = clamp(world->player->en->pos.y, -100000, 0);
 			}
 
 			set_screen_space();
-			draw_text_xform(font, STR("LEVEL EDITOR"), font_height, m4_translate(m4_identity, v3(screen_width * 0.5, screen_height-10, 0)), v2(0.1, 0.1), COLOR_RED);
+			draw_text_xform(font, STR("LEVEL EDITOR"), font_height, m4_translate(m4_identity, v3(screen_width * 0.5 - 10, screen_height-5, 0)), v2(0.1, 0.1), COLOR_RED);
 
 		}
 
@@ -1590,6 +1599,7 @@ int entry(int argc, char **argv){
 		if (is_key_just_pressed('T')){
 			// load_level(LEVEL_1);
 			// change_level(get_level(LEVEL_1));
+			// save_points_to_file();
 		}
 
 		// EXIT
