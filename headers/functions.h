@@ -364,6 +364,8 @@
 
 			new_level->level_path = sprint(get_temporary_allocator(), STR("%s/Levels/level_%d.png"), res_folder, id);
 			new_level->level_meta_path = sprint(get_temporary_allocator(), STR("%s/Levels/level_%d_meta.png"), res_folder, id);
+	
+			new_level->loaded = false;
 
 			levels[id] = new_level;
 		}

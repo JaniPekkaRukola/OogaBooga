@@ -4,9 +4,7 @@
 #include "settings.h"
 #include "types.h"
 #include "functions.h"
-// #include "level_parser.h"
 // #include "level_loader.h"
-// #include "level_meta_parser.h"
 #include "level_editor.c"
 
 

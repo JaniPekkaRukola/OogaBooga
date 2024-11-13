@@ -43,9 +43,9 @@ void render_background(){
 
 		draw_image_xform(level->level, xform, size, COLOR_WHITE);
 
-		if (IS_DEBUG){
-			draw_image_xform(level->level_meta, xform, size, COLOR_WHITE);
-		}
+		// if (IS_DEBUG){
+		// 	draw_image_xform(level->level_meta, xform, size, COLOR_WHITE);
+		// }
 
 	}
 }
@@ -53,7 +53,7 @@ void render_background(){
 void render_surfaceLine(){
     Vector2 pos = get_player_pos();
     int size_x = screen_width * 3;
-    draw_rect(v2(pos.x-(size_x*0.5), 0), v2(size_x, 1), COLOR_RED);
+    draw_rect(v2(pos.x-(size_x*0.5), 0), v2(size_x, 1), v4(1, 0, 1, 1));
 }
 
 void render_oxygen(){
@@ -80,6 +80,24 @@ void render_oxygen(){
 
 void render_ui(){
 
+}
+
+void render_level_collision(Vector2* points, int count){
+	// printf("rendering level collision\n");
+
+	for (int i = 0; i < count; i++){
+
+		if (points[i].x == 0.0f || points[i].y == 0.0f){
+			// printf("render_level_collision_return_1\n");
+			return;
+		}
+		if (points[i+1].x == 0.0f || points[i+1].y == 0.0f){
+			// printf("render_level_collision_return_2\n");
+			return;
+		}
+
+		draw_line(points[i], points[i+1], 1, COLOR_RED);
+	}
 }
 
 // :render workstation ui || ::workstation ui
@@ -1244,44 +1262,63 @@ int entry(int argc, char **argv){
 
             set_screen_space();
 
-            // Vector2 size = v2(mainmenu_bg->width, mainmenu_bg->height);
-            Vector2 size = v2(screen_width, screen_height);
-			Matrix4 xform = m4_identity;
-			// xform = m4_translate(xform, v3(size.x * -0.5, size.y * -0.5, 0));
-			// draw_image_xform(mainmenu_bg, xform, v2(mainmenu_bg->width, mainmenu_bg->height), COLOR_WHITE);
-            draw_rect_xform(xform, v2(size.x, size.y), COLOR_WHITE);
+			// BG
+			{
+				Vector2 size = v2(screen_width, screen_height);
+				Matrix4 xform = m4_identity;
+				draw_rect_xform(xform, v2(size.x, size.y), COLOR_WHITE);
 
-			xform = m4_translate(xform, v3(size.x * 0.5, size.y * 0.5, 0));
-            draw_text_xform(font, STR("MAIN MENU"), font_height, m4_translate(xform, v3(0, 30, 0)), v2(0.2, 0.2), COLOR_BLACK);
+				xform = m4_translate(xform, v3(size.x * 0.5, size.y * 0.5, 0));
+				draw_text_xform(font, STR("MAIN MENU"), font_height, m4_translate(xform, v3(-10, 30, 0)), v2(0.2, 0.2), COLOR_BLACK);
+			}
 
-			Matrix4 xform_play = m4_identity;
-			// xform_play = m4_translate(xform_play, v3((size.x * -0.5) + 658, (size.y * -0.5) + 403, 0));
-			xform_play = m4_translate(xform_play, v3((size.x * -0.5), (size.y * -0.5), 0));
-			xform_play = m4_translate(xform_play, v3(658, size.y - 506, 0));
+			Vector2 button_size = v2(8, 5);
 
-			Vector4 col = v4(1, 0, 0, 1.0);
+			// gameplay
+			{
+				Matrix4 xform = m4_identity;
+				xform = m4_translate(xform, v3(screen_width * 0.5, screen_height * 0.5 + 5, 0));
+				Draw_Quad* quad = draw_rect_xform(xform, button_size, COLOR_GREEN);
+				draw_text_xform(font, STR("PLAY"), font_height, m4_translate(xform, v3(-20, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
 
-			Draw_Quad* quad_play = draw_rect_xform(xform, v2(20, 10), COLOR_RED);
 
-			if (range2f_contains(quad_to_range(*quad_play), get_mouse_pos_in_ndc())){
-				if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
-                    printf("PLAY\n");
-                    // world->ux_state = UX_gameplay;
-                    world->game_state = GAMESTATE_hub;
-					
-					// if (os_is_file_s(STR("world"))) {
-					// 	bool result = world_attempt_load_from_disk();
-					// 	if (!result) {
-					// 		// just setup a new world if it fails. temp
-					// 		setup_world();
-					// 	}
-					// 	setup_world();
-					// }
-					// else {
-					// 	setup_world();
-					// }
+				if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+					if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+						printf("PLAY\n");
+						// world->ux_state = UX_gameplay;
+						world->game_state = GAMESTATE_hub;
+						
+						// if (os_is_file_s(STR("world"))) {
+						// 	bool result = world_attempt_load_from_disk();
+						// 	if (!result) {
+						// 		// just setup a new world if it fails. temp
+						// 		setup_world();
+						// 	}
+						// 	setup_world();
+						// }
+						// else {
+						// 	setup_world();
+						// }
 
-					// world_save_to_disk();
+						// world_save_to_disk();
+					}
+				}
+			}
+
+
+			// level editor
+			{
+				Matrix4 xform = m4_identity;
+				xform = m4_translate(xform, v3(screen_width * 0.5, screen_height * 0.5 - 5, 0));
+				Draw_Quad* quad = draw_rect_xform(xform, button_size, COLOR_BLUE);
+				draw_text_xform(font, STR("Level editor"), font_height, m4_translate(xform, v3(-25, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+
+				if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+					if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+						printf("Level editor opening\n");
+						world->game_state = GAMESTATE_editor;
+					}
 				}
 			}
 
@@ -1372,13 +1409,21 @@ int entry(int argc, char **argv){
         if (world->game_state == GAMESTATE_level){
 
 			int max_points = 100;
-			// Vector2* loaded_points = alloc(get_heap_allocator(), max_points * sizeof(Vector2));
-			Vector2 loaded_points[max_points];
-			bool suc = load_points_from_file((Vector2*)loaded_points, max_points, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_test.txt"), get_heap_allocator());
-			assert(suc, "failed");
+			int count = 6;
+			Vector2 loaded_points[100];
+			// Vector2 loaded_points[];
 
-			printf("Loaded points [0] = %f, %f\n", loaded_points[0].x, loaded_points[0].y);
-			printf("Loaded points [1] = %f, %f\n", loaded_points[1].x, loaded_points[1].y);
+
+			if (world->level.loaded == false)
+			{
+				// Vector2* loaded_points = alloc(get_heap_allocator(), max_points * sizeof(Vector2));
+				bool suc = load_points_from_file((Vector2*)loaded_points, max_points, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_test.txt"), get_heap_allocator());
+				assert(suc, "failed");
+
+				printf("Loaded points [0] = %f, %f\n", loaded_points[0].x, loaded_points[0].y);
+				printf("Loaded points [1] = %f, %f\n", loaded_points[1].x, loaded_points[1].y);
+				world->level.loaded = true;
+			}
 
             world_frame = (WorldFrame){0};
 
@@ -1431,7 +1476,11 @@ int entry(int argc, char **argv){
 
             render_entities();
 
-
+			if (IS_DEBUG){
+				// render_level_collision(loaded_points);
+				render_level_collision(loaded_points, count);
+				// render_level_collision((Vector2*)loaded_points);
+			}
 
 
             // printf("Player pos = %.0f, %.0f\n", world->player->pos.x, world->player->pos.y);

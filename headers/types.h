@@ -166,6 +166,7 @@ typedef struct Segment {
         // Segment* segments;        // Array of collision segments
         // int segment_count;        // Number of segments in the array
         Segment* collision_boundaries;
+        bool loaded;
     } Level;
 
     typedef struct LevelMeta {

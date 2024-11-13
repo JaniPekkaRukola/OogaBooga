@@ -100,16 +100,40 @@ void render_level_editor(LevelEditor* editor) {
 
     set_screen_space();
 
-    Matrix4 save_button = m4_identity;
-    save_button = m4_translate(save_button, v3(0, screen_height - 10, 0));
-    Draw_Quad* save_quad = draw_rect_xform(save_button, v2(5, 5), COLOR_GREEN);
-    draw_text_xform(font, STR("Save"), font_height, m4_translate(save_button, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+    Vector2 button_size = v2(5, 5);
 
-    if (range2f_contains(quad_to_range(*save_quad), get_mouse_pos_in_ndc())){
-        if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
-            consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-            printf("Saving to a file...\n");
-            save_points_to_file(editor->points, editor->point_count, STR("res\\abyssophobia\\Levels\\"), STR("level_1_test.txt"));
+    // save button
+    {
+        Matrix4 save_button = m4_identity;
+        save_button = m4_translate(save_button, v3(0, screen_height - 10, 0));
+        Draw_Quad* save_quad = draw_rect_xform(save_button, button_size, COLOR_GREEN);
+        draw_text_xform(font, STR("Save"), font_height, m4_translate(save_button, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+
+        if (range2f_contains(quad_to_range(*save_quad), get_mouse_pos_in_ndc())){
+            if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+                consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+                printf("Saving to a file...\n");
+                save_points_to_file(editor->points, editor->point_count, STR("res\\abyssophobia\\Levels\\"), STR("level_1_test.txt"));
+            }
+        }
+    }
+
+    // reset button
+    {
+        Matrix4 xform = m4_identity;
+        xform = m4_translate(xform, v3(0, screen_height - 20, 0));
+        Draw_Quad* quad = draw_rect_xform(xform, button_size, COLOR_RED);
+        draw_text_xform(font, STR("RESET"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+
+        if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+            if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+                consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+                printf("Resetting...\n");
+                for (int i = 0; i < editor->point_count; i++){
+                    editor->points[i] = v2(0, 0);
+                }
+                editor->point_count = 0;
+            }
         }
     }
 }
