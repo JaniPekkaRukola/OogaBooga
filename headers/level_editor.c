@@ -9,11 +9,7 @@ typedef struct {
 } LevelEditor;
 
 
-float v2_distance(Vector2 a, Vector2 b) {
-    float dx = b.x - a.x;
-    float dy = b.y - a.y;
-    return sqrtf(dx * dx + dy * dy);
-}
+
 
 
 

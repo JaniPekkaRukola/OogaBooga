@@ -1086,7 +1086,7 @@ void render_entities(){
         if (en && en->is_valid){
             switch (en->entity_id){
 
-                // :Render player
+                // :Render player || :render_player
                 case ENTITY_player:{
                     {
                         Sprite* sprite = get_sprite(SPRITE_player);
@@ -1095,6 +1095,7 @@ void render_entities(){
                         xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
                         // draw_rect_xform(xform, v2(20, 20), COLOR_BLACK);
                         draw_image_xform(sprite->image, xform, v2(get_sprite_size(sprite).x * 2, get_sprite_size(sprite).y * 2), COLOR_WHITE);
+                        // draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
                     }
                 } break;
 
@@ -1409,7 +1410,7 @@ int entry(int argc, char **argv){
         if (world->game_state == GAMESTATE_level){
 
 			int max_points = 100;
-			int count = 6;
+			int count = 16;
 			Vector2 loaded_points[100];
 			// Vector2 loaded_points[];
 
@@ -1483,6 +1484,7 @@ int entry(int argc, char **argv){
 			}
 
 
+
             // printf("Player pos = %.0f, %.0f\n", world->player->pos.x, world->player->pos.y);
 
 
@@ -1506,20 +1508,70 @@ int entry(int argc, char **argv){
             if (is_key_down('S')){input_axis.y -= 1.0;}
             if (is_key_down('D')){input_axis.x += 1.0;}
 
-            // check for collisions
-            // check_for_collisions(input_axis);
+
+			//  ________________________________________________________________________________________________________________________________________
+			// | after-COLLISION LOGIC WITH 2D VECTORS & RECTANGLES (gliding along vectors)
+			// | (should work fine with angled vectors) 
+			// | -------------------------------------------------------------------------
+			// | - *detect collision*
+			// | - get the closest vector
+			// | - get the angle of the vector
+			// | - if angle is 0, 90, 180, 360
+			// |	- cancel player movement (or just dont apply it)
+			// | - else:
+			// |	- get the direction the player is moving
+			// | 	- switch angle:
+			// | 		- case 45 -> "\" if player is moving LEFT:
+			// |			- player_pos.y += displacement_value
+			// |		- case 135 -> "/" if player is moving LEFT:
+			// |			- player_pos.y -= displacement_value
+			// |
+			// | - "displacement_value" can be decreased with 'more vertical' angles so the player "glides" along the vector slower
+			// |
+			// | - ? = havent thought about this yet
+			// | - can this be used somewhere: "which side of the vector the player is on"? eg: 
+			// |		vector is 45 degrees and looks like this: "\" 
+			// |			if player is RIGHT of the vector -> player should glide up (along the vector) by pressing 'A' and down by pressing 'S'. 	other buttons wont trigger collisions with vector
+			// |			if player is LEFT of the vector -> player should glide down (along the vector) by pressing 'D' and up by pressing 'W'.		other buttons wont trigger collisions with vector
+			// |________________________________________________________________________________________________________________________________________
 
 
-            // normalize
-            input_axis = v2_normalize(input_axis);
+			Vector2 player_pos_2 = get_player_pos();
+				if (world->player->is_running) {
+					player_pos_2 = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t));
+				} else {
+					player_pos_2 = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t));
+				}
 
-            // player_pos = player_pos + (input_axis * 10.0);
 
-            if (world->player->is_running){ world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t)); }
-            else { world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t)); }
-            // world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed* delta_t));
+			Vector4 player_hitbox_col = COLOR_GREEN;
+			// if (collision(loaded_points, count, get_player_pos(), &input_axis)){
+			if (collision(loaded_points, count, player_pos_2)){
+				// printf("COLLISION\n");
+				player_hitbox_col = COLOR_RED;
+			}
+			else{
+				// normalize
+				input_axis = v2_normalize(input_axis);
 
-            world->player->en->pos.y = clamp(world->player->en->pos.y, -100000, 0);
+				// player_pos = player_pos + (input_axis * 10.0);
+
+				if (world->player->is_running) {
+					world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t));
+				} else {
+					world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t));
+				}
+
+				world->player->en->pos.y = clamp(world->player->en->pos.y, -100000, 0);
+			}
+
+			if (IS_DEBUG){
+				player_hitbox_col.a = 0.5;
+				Vector2 size = get_sprite_size(get_sprite(SPRITE_player));
+				size.x *= 2;
+				size.y *= 2;
+				draw_rect_xform(m4_translate(m4_identity, v3(player_pos.x, player_pos.y, 0)), size, player_hitbox_col);
+			}
 
         }
 

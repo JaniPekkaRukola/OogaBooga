@@ -90,6 +90,12 @@
 		return (Range2f) {quad.bottom_left, quad.top_right};
 	}
 
+	float v2_distance(Vector2 a, Vector2 b) {
+		float dx = b.x - a.x;
+		float dy = b.y - a.y;
+		return sqrtf(dx * dx + dy * dy);
+	}
+
     Draw_Quad *draw_rect_with_border(Matrix4 xform_slot, Vector2 inside_size, float border_width, Vector4 slot_col, Vector4 border_col){
 		// draws a rect with borders
 		// input xfrom is the base xform with no border
@@ -309,7 +315,81 @@
 
 // 
 
+// :COLLISION
+// Determines the orientation of the triplet (p, q, r)
+// Returns 0 if collinear, 1 if clockwise, and 2 if counterclockwise
+float orientation(Vector2 p, Vector2 q, Vector2 r) {
+    float val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+    if (fabs(val) < 1e-6) return 0; // Collinear
+    return (val > 0) ? 1 : 2;       // Clockwise or counterclockwise
+}
 
+bool on_segment(Vector2 p1, Vector2 p2, Vector2 p) {
+    // Check if point p lies on the line segment from p1 to p2
+    return (p.x >= fmin(p1.x, p2.x) && p.x <= fmax(p1.x, p2.x)) &&
+           (p.y >= fmin(p1.y, p2.y) && p.y <= fmax(p1.y, p2.y));
+}
+// Function to determine if two line segments intersect
+bool line_segment_intersect(Vector2 p1, Vector2 p2, Vector2 q1, Vector2 q2) {
+    float o1 = orientation(p1, p2, q1);
+    float o2 = orientation(p1, p2, q2);
+    float o3 = orientation(q1, q2, p1);
+    float o4 = orientation(q1, q2, p2);
+
+    // General case: line segments intersect if orientations differ
+    if (o1 != o2 && o3 != o4) {
+        return true;
+    }
+
+    // Special cases: check for collinear points and overlap
+    return (o1 == 0 && on_segment(p1, q1, p2)) ||
+           (o2 == 0 && on_segment(p1, q2, p2)) ||
+           (o3 == 0 && on_segment(q1, p1, q2)) ||
+           (o4 == 0 && on_segment(q1, p2, q2));
+}
+
+
+
+// bool collision(Vector2* points, int points_count, Vector2 player_pos, Vector2* input_axis) {
+bool collision(Vector2* points, int points_count, Vector2 player_pos) {
+    Vector2 sprite_size = get_sprite_size(get_sprite(SPRITE_player));
+
+    // Range2f player_bounds = {
+    //     .min = player_pos,
+    //     .max = { player_pos.x + sprite_size.x, player_pos.y + sprite_size.y }
+    // };
+
+	// using this (size * 2) cause currently player sprite is scaled 2x when rendering. need a new player sprite
+	Range2f player_bounds = {
+        .min = player_pos,
+        .max = { player_pos.x + (sprite_size.x * 2), player_pos.y + (sprite_size.y * 2)}
+    };
+
+    // Define the four edges of the player’s bounding box as line segments
+    Vector2 bottom_left = player_bounds.min;
+    Vector2 top_left = { player_bounds.min.x, player_bounds.max.y };
+    Vector2 bottom_right = { player_bounds.max.x, player_bounds.min.y };
+    Vector2 top_right = player_bounds.max;
+
+    // Iterate through each line segment formed by consecutive points in the array
+    for (int i = 0; i < points_count - 1; i++) {
+        Vector2 pointA = points[i];
+        Vector2 pointB = points[i + 1];
+
+        // Check for intersection with each edge of the players bounding box
+		if (line_segment_intersect(bottom_left, top_left, pointA, pointB) ||   // left
+            line_segment_intersect(top_left, top_right, pointA, pointB) ||     // top
+            line_segment_intersect(top_right, bottom_right, pointA, pointB) || // right
+            line_segment_intersect(bottom_right, bottom_left, pointA, pointB)) // bottom
+        {
+			// COLLISION
+            return true;
+        }
+    }
+
+	// no collision
+    return false;
+}
 
 
 // SETUPS -------------------------------------------->
