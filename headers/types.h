@@ -71,6 +71,7 @@ inline Range2f range2f_make(Vector2 min, Vector2 max) { return (Range2f) { min, 
 
         SPRITE_player,
         SPRITE_algae1,
+        SPRITE_rock,
 
         // categories
         SPRITE_CATEGORY_items,

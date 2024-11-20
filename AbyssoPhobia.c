@@ -1151,6 +1151,7 @@ int entry(int argc, char **argv){
     sprites[SPRITE_nil] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%s/Sprites/nil.png"), res_folder)   ,get_heap_allocator())};
     sprites[SPRITE_player] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%s/Sprites/player.png"), res_folder)   ,get_heap_allocator())};
     sprites[SPRITE_algae1] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%s/Sprites/algae1.png"), res_folder)   ,get_heap_allocator())};
+    sprites[SPRITE_rock] = (Sprite){.image=load_image_from_disk(  sprint(get_temporary_allocator(), STR("%s/Sprites/rock.png"), res_folder)   ,get_heap_allocator())};
 
 
 
@@ -1214,8 +1215,9 @@ int entry(int argc, char **argv){
     setup_player();
 	setup_levels();
 
-	LevelEditor editor;
-	init_level_editor(&editor);
+	// LevelEditor editor;
+	LevelEditor* editor = alloc(get_heap_allocator(), sizeof(LevelEditor));
+	// init_level_editor(&editor);
 
 	// Level level_test = load_level(LEVEL_1);
 	// for (int i = 0; i < my_level.boundary_count; i++) {
@@ -1318,6 +1320,8 @@ int entry(int argc, char **argv){
 					if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
 						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 						printf("Level editor opening\n");
+						// init_level_editor(&editor);
+						init_level_editor(editor);
 						world->game_state = GAMESTATE_editor;
 					}
 				}
@@ -1410,7 +1414,7 @@ int entry(int argc, char **argv){
         if (world->game_state == GAMESTATE_level){
 
 			int max_points = 100;
-			int count = 16;
+			int count = 4;
 			Vector2 loaded_points[100];
 			// Vector2 loaded_points[];
 
@@ -1418,7 +1422,8 @@ int entry(int argc, char **argv){
 			if (world->level.loaded == false)
 			{
 				// Vector2* loaded_points = alloc(get_heap_allocator(), max_points * sizeof(Vector2));
-				bool suc = load_points_from_file((Vector2*)loaded_points, max_points, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_test.txt"), get_heap_allocator());
+				// @ghost_points
+				bool suc = load_points_from_file((Vector2*)loaded_points, max_points, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_meta.txt"), get_heap_allocator());
 				assert(suc, "failed");
 
 				printf("Loaded points [0] = %f, %f\n", loaded_points[0].x, loaded_points[0].y);
@@ -1592,6 +1597,15 @@ int entry(int argc, char **argv){
 						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 						level_selected = true;
 						world->level = *get_level(LEVEL_1);
+
+						string path = sprint(get_heap_allocator(), "res\\Abyssophobia\\Levels\\level_1_meta.txt");
+						if (os_is_file_s(path)){
+							// @ghost_points
+							bool suc = load_points_from_file((Vector2*)editor->points, 100, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_meta.txt"), get_heap_allocator());
+							editor->point_count = 4;
+							assert(suc, "failed");
+							printf("Level loaded from file\n");
+						}
 					}
 				}
 
@@ -1624,8 +1638,10 @@ int entry(int argc, char **argv){
 				render_surfaceLine();
 
 
-				render_level_editor(&editor);
-				handle_editor_input(&editor, delta_t);
+				// render_level_editor(&editor);
+				// handle_editor_input(&editor, delta_t);
+				render_level_editor(editor);
+				handle_editor_input(editor, delta_t);
 
 
 
@@ -1709,8 +1725,7 @@ int entry(int argc, char **argv){
 		}
 
 		if (is_key_just_pressed('V')){
-			if (IS_DEBUG) IS_DEBUG = false;
-			else IS_DEBUG = true;
+			IS_DEBUG = !IS_DEBUG; // @Nicheen
 		}
 
 		if (is_key_just_pressed('G')){
