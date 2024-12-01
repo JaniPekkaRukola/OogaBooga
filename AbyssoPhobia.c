@@ -1414,7 +1414,7 @@ int entry(int argc, char **argv){
         if (world->game_state == GAMESTATE_level){
 
 			int max_points = 100;
-			int count = 4;
+			int count = 13;
 			Vector2 loaded_points[100];
 			// Vector2 loaded_points[];
 
@@ -1489,14 +1489,7 @@ int entry(int argc, char **argv){
 			}
 
 
-
-            // printf("Player pos = %.0f, %.0f\n", world->player->pos.x, world->player->pos.y);
-
-
-
             // :Input ------------------------------------------------------------------------------------>
-
-
             if (is_key_just_pressed(KEY_toggle_inventory)){
                 consume_key_just_pressed(KEY_toggle_inventory);
                 world->ux_state = UX_workbench;
@@ -1514,53 +1507,41 @@ int entry(int argc, char **argv){
             if (is_key_down('D')){input_axis.x += 1.0;}
 
 
-			//  ________________________________________________________________________________________________________________________________________
-			// | after-COLLISION LOGIC WITH 2D VECTORS & RECTANGLES (gliding along vectors)
-			// | (should work fine with angled vectors) 
-			// | -------------------------------------------------------------------------
-			// | - *detect collision*
-			// | - get the closest vector
-			// | - get the angle of the vector
-			// | - if angle is 0, 90, 180, 360
-			// |	- cancel player movement (or just dont apply it)
-			// | - else:
-			// |	- get the direction the player is moving
-			// | 	- switch angle:
-			// | 		- case 45 -> "\" if player is moving LEFT:
-			// |			- player_pos.y += displacement_value
-			// |		- case 135 -> "/" if player is moving LEFT:
-			// |			- player_pos.y -= displacement_value
-			// |
-			// | - "displacement_value" can be decreased with 'more vertical' angles so the player "glides" along the vector slower
-			// |
-			// | - ? = havent thought about this yet
-			// | - can this be used somewhere: "which side of the vector the player is on"? eg: 
-			// |		vector is 45 degrees and looks like this: "\" 
-			// |			if player is RIGHT of the vector -> player should glide up (along the vector) by pressing 'A' and down by pressing 'S'. 	other buttons wont trigger collisions with vector
-			// |			if player is LEFT of the vector -> player should glide down (along the vector) by pressing 'D' and up by pressing 'W'.		other buttons wont trigger collisions with vector
-			// |________________________________________________________________________________________________________________________________________
-
-
-			Vector2 player_pos_2 = get_player_pos();
-				if (world->player->is_running) {
-					player_pos_2 = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t));
-				} else {
-					player_pos_2 = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t));
-				}
-
-
 			Vector4 player_hitbox_col = COLOR_GREEN;
-			// if (collision(loaded_points, count, get_player_pos(), &input_axis)){
-			if (collision(loaded_points, count, player_pos_2)){
-				// printf("COLLISION\n");
-				player_hitbox_col = COLOR_RED;
+			Vector2 player_pos_2 = get_player_pos();
+			Vector2 ground_vec = v2(0, 0); // To store the wall vector if a collision happens
+
+			// Determine movement
+			if (world->player->is_running) {
+				player_pos_2 = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t));
+			} else {
+				player_pos_2 = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->walking_speed * delta_t));
 			}
+
+			// Check for collision
+			if (collision(loaded_points, count, player_pos_2, &ground_vec)) {
+				player_hitbox_col = COLOR_RED;
+
+				// Normalize vector
+				ground_vec = v2_normalize(ground_vec);
+
+				// Project the player's velocity onto the vector
+				Vector2 projected_velocity = v2_mulf(ground_vec, v2_dot(input_axis, ground_vec));
+
+				// Update position based on projected velocity
+				if (world->player->is_running) {
+					world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(projected_velocity, world->player->running_speed * delta_t));
+				} else {
+					world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(projected_velocity, world->player->walking_speed * delta_t));
+				}
+			} 
 			else{
-				// normalize
+				player_hitbox_col = COLOR_GREEN;
+
+				// Normalize input_axis
 				input_axis = v2_normalize(input_axis);
 
-				// player_pos = player_pos + (input_axis * 10.0);
-
+				// Regular movement
 				if (world->player->is_running) {
 					world->player->en->pos = v2_add(world->player->en->pos, v2_mulf(input_axis, world->player->running_speed * delta_t));
 				} else {

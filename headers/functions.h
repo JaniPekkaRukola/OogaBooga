@@ -349,45 +349,37 @@ bool line_segment_intersect(Vector2 p1, Vector2 p2, Vector2 q1, Vector2 q2) {
 }
 
 
-
-// bool collision(Vector2* points, int points_count, Vector2 player_pos, Vector2* input_axis) {
-bool collision(Vector2* points, int points_count, Vector2 player_pos) {
+// collision v2
+bool collision(Vector2* points, int points_count, Vector2 player_pos, Vector2* wall_vector) {
     Vector2 sprite_size = get_sprite_size(get_sprite(SPRITE_player));
 
-    // Range2f player_bounds = {
-    //     .min = player_pos,
-    //     .max = { player_pos.x + sprite_size.x, player_pos.y + sprite_size.y }
-    // };
-
-	// using this (size * 2) cause currently player sprite is scaled 2x when rendering. need a new player sprite
-	Range2f player_bounds = {
+    Range2f player_bounds = {
         .min = player_pos,
         .max = { player_pos.x + (sprite_size.x * 2), player_pos.y + (sprite_size.y * 2)}
     };
 
-    // Define the four edges of the player’s bounding box as line segments
     Vector2 bottom_left = player_bounds.min;
     Vector2 top_left = { player_bounds.min.x, player_bounds.max.y };
     Vector2 bottom_right = { player_bounds.max.x, player_bounds.min.y };
     Vector2 top_right = player_bounds.max;
 
-    // Iterate through each line segment formed by consecutive points in the array
     for (int i = 0; i < points_count - 1; i++) {
         Vector2 pointA = points[i];
         Vector2 pointB = points[i + 1];
 
-        // Check for intersection with each edge of the players bounding box
-		if (line_segment_intersect(bottom_left, top_left, pointA, pointB) ||   // left
-            line_segment_intersect(top_left, top_right, pointA, pointB) ||     // top
-            line_segment_intersect(top_right, bottom_right, pointA, pointB) || // right
-            line_segment_intersect(bottom_right, bottom_left, pointA, pointB)) // bottom
-        {
-			// COLLISION
+        if (line_segment_intersect(bottom_left, top_left, pointA, pointB) ||
+            line_segment_intersect(top_left, top_right, pointA, pointB) ||
+            line_segment_intersect(top_right, bottom_right, pointA, pointB) ||
+            line_segment_intersect(bottom_right, bottom_left, pointA, pointB)) {
+
+            // Output the wall's direction vector
+            if (wall_vector) {
+                *wall_vector = v2_sub(pointB, pointA); // Direction of the wall
+            }
             return true;
         }
     }
 
-	// no collision
     return false;
 }
 
