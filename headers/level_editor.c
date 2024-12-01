@@ -1,6 +1,6 @@
 #define MAX_POINTS 100
 
-bool selecting_resource = false;
+bool portal_startpos_latch = false; 
 
 typedef struct LevelEditor{
     Vector2 points[MAX_POINTS];
@@ -8,7 +8,16 @@ typedef struct LevelEditor{
     int selected_point_index;  //for dragging points
     float zoom;
     // bool point_selected; // true if point is currently selected
+
+    bool adding_points;
+
+    bool selecting_resource;
     SpriteID selected_resource;
+
+    bool adding_spawnpoint;
+    Vector2 spawnpoint;
+
+    bool adding_deathzone;
 } LevelEditor;
 
 
@@ -81,8 +90,13 @@ void save_points_to_file(Vector2* points, int point_count, string path, string f
 
 void init_level_editor(LevelEditor* editor) {
     editor->point_count = 0;
+    editor->adding_points = false;
     editor->selected_point_index = -1;
     editor->zoom = 1.0f;
+    editor->adding_spawnpoint = false;
+    editor->spawnpoint = v2(0,0);
+
+    editor->adding_deathzone = false;
 }
 
 // void init_level_editor_with_level(LevelEditor* editor, int level){
@@ -97,11 +111,18 @@ void add_point(LevelEditor* editor, Vector2 pos) {
     }
 }
 
+void add_spawnpoint(LevelEditor* editor, Vector2 mouse_pos){
+    editor->spawnpoint = mouse_pos;
+}
+
 void render_level_editor(LevelEditor* editor) {
 
     set_world_space();
 
     Vector2 point_size = v2(5, 5);
+    Vector2 spawnpoint_size = v2(4, 4);
+    Vector4 spawnpoint_col = v4(0, 1, 0, 1);
+    int button_padding = 10;
 
     for (int i = 0; i < editor->point_count; ++i) {
         Vector2 point = editor->points[i];
@@ -119,14 +140,38 @@ void render_level_editor(LevelEditor* editor) {
     Vector2 button_size = v2(5, 5);
     int margin_top = screen_height;
 
+    // 'add points mode' button
+    {
+        Vector4 col = COLOR_WHITE;
+        if (editor->adding_points) col = COLOR_GREEN;
+        else col = COLOR_RED;
+
+        Matrix4 xform = m4_identity;
+        xform = m4_translate(xform, v3(0, margin_top -= button_padding, 0));
+        Draw_Quad* quad = draw_rect_xform(xform, button_size, col);
+        draw_text_xform(font, STR("X"), font_height, m4_translate(xform, v3(button_size.x * 0.25, button_size.y * 0.25, 0)), v2(0.1, 0.1), COLOR_BLACK);
+
+
+        if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+            draw_text_xform(font, STR("Add points mode"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+            if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+                consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+                editor->adding_points = !editor->adding_points;
+                printf("Adding points mode toggled. Now = %d\n", editor->adding_points);
+            }
+        }
+    }
+
     // points save button
     {
         Matrix4 save_button = m4_identity;
-        save_button = m4_translate(save_button, v3(0, margin_top -= 10, 0));
+        save_button = m4_translate(save_button, v3(0, margin_top -= button_padding, 0));
         Draw_Quad* save_quad = draw_rect_xform(save_button, button_size, COLOR_GREEN);
-        draw_text_xform(font, STR("Save"), font_height, m4_translate(save_button, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+        draw_text_xform(font, STR("S"), font_height, m4_translate(save_button, v3(button_size.x * 0.25, button_size.y * 0.25, 0)), v2(0.1, 0.1), COLOR_BLACK);
+        
 
         if (range2f_contains(quad_to_range(*save_quad), get_mouse_pos_in_ndc())){
+            draw_text_xform(font, STR("Save"), font_height, m4_translate(save_button, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
             if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
                 consume_key_just_pressed(MOUSE_BUTTON_LEFT);
                 printf("Saving to a file...\n");
@@ -138,11 +183,13 @@ void render_level_editor(LevelEditor* editor) {
     // points reset button
     {
         Matrix4 xform = m4_identity;
-        xform = m4_translate(xform, v3(0, margin_top -= 10, 0));
+        xform = m4_translate(xform, v3(0, margin_top -= button_padding, 0));
         Draw_Quad* quad = draw_rect_xform(xform, button_size, COLOR_RED);
-        draw_text_xform(font, STR("Reset points (ctrl + mouse1)"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+        draw_text_xform(font, STR("R"), font_height, m4_translate(xform, v3(button_size.x * 0.25, button_size.y * 0.25, 0)), v2(0.1, 0.1), COLOR_BLACK);
+
 
         if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+            draw_text_xform(font, STR("Reset points (ctrl + mouse1)"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
             if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
                 consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
@@ -160,12 +207,13 @@ void render_level_editor(LevelEditor* editor) {
     // portal button
     {
         Matrix4 xform = m4_identity;
-        xform = m4_translate(xform, v3(0, margin_top -= 15, 0));
+        xform = m4_translate(xform, v3(0, margin_top -= button_padding, 0));
         Draw_Quad* quad = draw_rect_xform(xform, button_size, COLOR_BLUE);
-        draw_text_xform(font, STR("Portal"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+        draw_text_xform(font, STR("P"), font_height, m4_translate(xform, v3(button_size.x * 0.25, button_size.y * 0.25, 0)), v2(0.1, 0.1), COLOR_BLACK);
 
 
         if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+            draw_text_xform(font, STR("Portal"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
             if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
                 consume_key_just_pressed(MOUSE_BUTTON_LEFT);
                 printf("Selected portal\n");
@@ -176,48 +224,130 @@ void render_level_editor(LevelEditor* editor) {
     // select resource button
     {
         Matrix4 xform = m4_identity;
-        xform = m4_translate(xform, v3(0, margin_top -= 15, 0));
+        xform = m4_translate(xform, v3(0, margin_top -= button_padding, 0));
         Draw_Quad* quad = draw_rect_xform(xform, button_size, COLOR_GREEN);
-        draw_text_xform(font, STR("Select resource"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+        draw_text_xform(font, STR("R"), font_height, m4_translate(xform, v3(button_size.x * 0.25, button_size.y * 0.25, 0)), v2(0.1, 0.1), COLOR_BLACK);
+
 
         if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+            draw_text_xform(font, STR("Select resource"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
             if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
                 consume_key_just_pressed(MOUSE_BUTTON_LEFT);
 
                 printf("Selecting resource\n");
-                selecting_resource = !selecting_resource;
+                editor->selecting_resource = !editor->selecting_resource;
             }
         }
     }
 
     // resource selection
-    if (selecting_resource)
+    if (editor->selecting_resource)
     {
         Vector2 bg_size = v2(RESOURCE_MAX * 10, 20);
-        Matrix4 bg = m4_identity;
-        bg = m4_translate(bg, v3(10, margin_top - (bg_size.y), 0));
-        draw_rect_xform(bg, bg_size, v4(0.5, 0.5, 0.5, 1));
+        // Matrix4 bg = m4_identity;
+        // bg = m4_translate(bg, v3(10, margin_top - (bg_size.y), 0));
+        // draw_rect_xform(bg, bg_size, v4(0.5, 0.5, 0.5, 1));
 
-        int y_start = margin_top - bg_size.y;
-        int x_start = 10;
+        // int y_start = margin_top - bg_size.y;
         Vector2 slot_size = v2(10, 10);
+        int x_start = 10;
+        int y_start = margin_top - slot_size.y;
 
         // draw resource icons
         for (SpriteID id = 1; id < SPRITE_MAX; id++){
             Matrix4 xform = m4_identity;
             xform = m4_translate(xform, v3(x_start + (id * slot_size.x), y_start, 0));
             Sprite* sprite = get_sprite(id);
-            Draw_Quad* quad = draw_image_xform(sprite->image, xform, slot_size, COLOR_WHITE);
+            // Draw_Quad* quad = draw_image_xform(sprite->image, xform, slot_size, COLOR_WHITE);
+            Draw_Quad* quad = draw_rect_xform(xform, slot_size, v4(0,0,0,0));
 
             if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+                draw_image_xform(sprite->image, m4_translate(xform, v3(slot_size.x * -0.5, slot_size.y * -0.5, 0)), v2(slot_size.x * 2, slot_size.y * 2), COLOR_WHITE);
+    
                 if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
                     consume_key_just_pressed(MOUSE_BUTTON_LEFT);
                     editor->selected_resource = id;
                     printf("Selected %d\n", id);
                 }
             }
+            else{
+                draw_image_xform(sprite->image, xform, slot_size, COLOR_WHITE);
+            }
         }
+    }
 
+    // Add spawnpoint button
+    {
+        Matrix4 xform = m4_identity;
+        xform = m4_translate(xform, v3(0, margin_top -= button_padding, 0));
+        Draw_Quad* quad = draw_rect_xform(xform, button_size, COLOR_WHITE);
+        draw_text_xform(font, STR("S"), font_height, m4_translate(xform, v3(button_size.x * 0.25, button_size.y * 0.25, 0)), v2(0.1, 0.1), COLOR_BLACK);
+
+
+        if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+            draw_text_xform(font, STR("Add spawnpoint"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+            if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+                consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+                // editor->adding_spawnpoint = !editor->adding_spawnpoint;
+                editor->adding_spawnpoint = true;
+            }
+        }
+    }
+    if (editor->adding_spawnpoint){
+        set_world_space();
+
+        Matrix4 xform = m4_identity;
+        Vector2 mouse_pos = get_mouse_pos_in_world_space();
+        xform = m4_translate(xform, v3(mouse_pos.x, mouse_pos.y, 0));
+        draw_rect_xform(xform, v2(2, 2), v4(0, 1, 0, 0.5));
+
+        if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+            consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+            editor->adding_spawnpoint = false;
+            add_spawnpoint(editor, mouse_pos);
+            printf("added spawnpoint to %f, %f\n", editor->spawnpoint.x, editor->spawnpoint.y);
+
+        }
+        set_screen_space();
+    }
+
+    // render spawnpoint
+    {
+        set_world_space();
+        Matrix4 xform = m4_identity;
+        xform = m4_translate(xform, v3(editor->spawnpoint.x, editor->spawnpoint.y, 0));
+        draw_rect_xform(xform, spawnpoint_size, spawnpoint_col);
+    }
+
+    // death zone butotn
+    {
+        set_screen_space();
+        Matrix4 xform = m4_identity;
+        xform = m4_translate(xform, v3(0, margin_top -= button_padding, 0));
+        Draw_Quad* quad = draw_rect_xform(xform, button_size, COLOR_WHITE);
+        draw_text_xform(font, STR("D"), font_height, m4_translate(xform, v3(button_size.x * 0.25, button_size.y * 0.25, 0)), v2(0.1, 0.1), COLOR_BLACK);
+
+
+        if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+            draw_text_xform(font, STR("Add Deathzone"), font_height, m4_translate(xform, v3(10, 0, 0)), v2(0.1, 0.1), COLOR_BLACK);
+            if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+                consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+                editor->adding_deathzone = true;
+            }
+        }
+    }
+    if (editor->adding_deathzone){
+        // start dragging
+        if (is_key_down(MOUSE_BUTTON_LEFT)){
+            if (!portal_startpos_latch){
+                portal_startpos_latch = true;
+                printf("Dragging\n");
+            }
+        }
+        else if (is_key_up(MOUSE_BUTTON_LEFT)){
+            editor->adding_deathzone = false;
+            portal_startpos_latch = false;
+        }
     }
 
 
@@ -231,45 +361,51 @@ void handle_editor_input(LevelEditor* editor, float delta_t) {
     Vector2 mouse_pos = get_mouse_pos_in_world_space();
     float point_selection_dis = 20.0f;
 
-    if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) {
-        consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-        int point_index = -1;
+    if (editor->adding_points)
+    {
+        if (is_key_just_pressed(MOUSE_BUTTON_LEFT)) {
+            consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+            int point_index = -1;
 
-        // Check if a point is already selected for dragging
-        for (int i = 0; i < editor->point_count; ++i) {
-            if (v2_distance(editor->points[i], mouse_pos) < point_selection_dis) {
-                editor->selected_point_index = i;
-                point_index = i;
-                break;
+            // Check if a point is already selected for dragging
+            for (int i = 0; i < editor->point_count; ++i) {
+                if (v2_distance(editor->points[i], mouse_pos) < point_selection_dis) {
+                    editor->selected_point_index = i;
+                    point_index = i;
+                    break;
+                }
+            }
+
+            // printf("selected point index = %d\n", editor->selected_point_index);
+
+            if (point_index == -1 && editor->selected_point_index == -1) {  // Add a new point if none selected
+                add_point(editor, mouse_pos);
+                printf("Added point\n");
             }
         }
 
-        // printf("selected point index = %d\n", editor->selected_point_index);
-
-        if (point_index == -1 && editor->selected_point_index == -1) {  // Add a new point if none selected
-            add_point(editor, mouse_pos);
-            printf("Added point\n");
+        // Release point on right-click
+        if (is_key_just_pressed(MOUSE_BUTTON_RIGHT)) {
+            consume_key_just_pressed(MOUSE_BUTTON_RIGHT);
+            editor->selected_point_index = -1;
         }
+
+        // Dragging the selected point
+        if (editor->selected_point_index != -1 && is_key_down(MOUSE_BUTTON_LEFT)) {
+            editor->points[editor->selected_point_index] = mouse_pos;
+    }
     }
 
-    // Release point on right-click
-    if (is_key_just_pressed(MOUSE_BUTTON_RIGHT)) {
-        consume_key_just_pressed(MOUSE_BUTTON_RIGHT);
-        editor->selected_point_index = -1;
-    }
-
-    // Dragging the selected point
-    if (editor->selected_point_index != -1 && is_key_down(MOUSE_BUTTON_LEFT)) {
-        editor->points[editor->selected_point_index] = mouse_pos;
-    }
 
     if (is_key_just_pressed(MOUSE_BUTTON_MIDDLE)){
-        screen_drag_start = get_mouse_pos_in_screen();
-        printf("pressed\n");
+        // screen_drag_start = get_mouse_pos_in_screen();
+        screen_drag_start = get_mouse_pos_in_world_space();
+        printf("pressed\t start @ %.f, %.f\n", screen_drag_start.x, screen_drag_start.y);
     }
 
     else if (is_key_down(MOUSE_BUTTON_MIDDLE)){
-        printf("down\t drag start = %f, %f\n", screen_drag_start.x, screen_drag_start.y);
+        // printf("key down\n");
+        // printf("down\t drag start = %f, %f\n", screen_drag_start.x, screen_drag_start.y);
         // Vector2 mouse_pos_ndc = get_mouse_pos_in_ndc();
         // Vector2 mouse_pos_inverted = mouse_pos_ndc;
         // mouse_pos_inverted.x *= -1;
@@ -280,13 +416,31 @@ void handle_editor_input(LevelEditor* editor, float delta_t) {
 
         // Vector2 start_player = world->player->en->pos;
 
-        world->player->en->pos = screen_drag_start;
+        Vector2 pos = get_mouse_pos_in_world_space();
+
+        // float dist = v2_distance(screen_drag_start, pos);
+        // printf("dist = %f\n", dist);
+
+        float dist_x = pos.x - screen_drag_start.x;
+        float dist_y = pos.y - screen_drag_start.y;
+
+        dist_x *= -1;
+        dist_y *= -1;
+
+        dist_x /= 10;
+        dist_y /= 10;
+
+        // printf("Dist x,y = %.1f %.1f\n", dist_x, dist_y);
+
+        world->player->en->pos = v2(dist_x, dist_y);
 
     }
     if (is_key_just_released(MOUSE_BUTTON_MIDDLE)){
-        screen_drag_start = v2(0, 0);
+        // screen_drag_start = v2(0, 0);
         printf("Release\n");
     }
+
+    // printf("player pos = %.1f, %.1f\n", world->player->en->pos.x, world->player->en->pos.y);
 
     // zooom
     for (u64 i = 0; i < input_frame.number_of_events; i++) {

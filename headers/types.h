@@ -231,6 +231,8 @@ typedef struct Segment {
         bool is_selectable;
         // bool enabled;
         bool is_valid;
+        bool is_resource;
+
     } Entity;
 
 
