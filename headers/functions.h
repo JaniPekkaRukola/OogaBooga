@@ -383,6 +383,20 @@ bool collision(Vector2* points, int points_count, Vector2 player_pos, Vector2* w
     return false;
 }
 
+int get_points_count(Vector2 loaded_points[100], int max_points){
+    // this stupid and unefficient for-loop checks for many points are in the meta file
+    for (int i = 0; i < max_points; i++){
+        float* point = &loaded_points[i].x;
+        if (*point == 0.0f){
+            // printf("end at %d\n", i);
+            return (int)i;
+        }
+    }
+    return 0;
+}
+
+
+
 
 // SETUPS -------------------------------------------->
     void setup_world(){

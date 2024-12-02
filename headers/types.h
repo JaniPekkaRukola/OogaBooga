@@ -7,6 +7,8 @@
 
 #define MAX_RECIPE_ITEMS 8
 
+#define MAX_POINTS 100
+
 // font
 Gfx_Font* font;
 u32 font_height = 48;
@@ -168,6 +170,7 @@ typedef struct Segment {
         // int segment_count;        // Number of segments in the array
         Segment* collision_boundaries;
         bool loaded;
+        Vector2 spawnpoint;
     } Level;
 
     typedef struct LevelMeta {

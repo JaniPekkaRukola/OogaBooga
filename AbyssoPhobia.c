@@ -1096,6 +1096,13 @@ void render_entities(){
                         // draw_rect_xform(xform, v2(20, 20), COLOR_BLACK);
                         draw_image_xform(sprite->image, xform, v2(get_sprite_size(sprite).x * 2, get_sprite_size(sprite).y * 2), COLOR_WHITE);
                         // draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
+
+						if (IS_DEBUG){
+							set_screen_space();
+							Vector2 pos = get_player_pos();
+							draw_text_xform(font, sprint(get_heap_allocator(), STR("%.1f,  %.1f"), pos.x, pos.y), font_height, m4_translate(m4_identity, v3(0, screen_height - 10, 0)), v2(0.1, 0.1), COLOR_BLACK);
+							set_world_space();
+						}
                     }
                 } break;
 
@@ -1413,22 +1420,28 @@ int entry(int argc, char **argv){
 		// ::LEVEL || ::GAMEPLAY
         if (world->game_state == GAMESTATE_level){
 
-			int max_points = 100;
-			int count = 13;
-			Vector2 loaded_points[100];
-			// Vector2 loaded_points[];
-
+			int count;
+			Vector2 loaded_points[MAX_POINTS];
 
 			if (world->level.loaded == false)
 			{
 				// Vector2* loaded_points = alloc(get_heap_allocator(), max_points * sizeof(Vector2));
 				// @ghost_points
-				bool suc = load_points_from_file((Vector2*)loaded_points, max_points, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_meta.txt"), get_heap_allocator());
+				bool suc = load_points_from_file((Vector2*)loaded_points, MAX_POINTS, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_meta.txt"), get_heap_allocator());
 				assert(suc, "failed");
 
-				printf("Loaded points [0] = %f, %f\n", loaded_points[0].x, loaded_points[0].y);
-				printf("Loaded points [1] = %f, %f\n", loaded_points[1].x, loaded_points[1].y);
+				// printf("Loaded points [0] = %f, %f\n", loaded_points[0].x, loaded_points[0].y);
+				// printf("Loaded points [1] = %f, %f\n", loaded_points[1].x, loaded_points[1].y);
+
+				count = get_points_count(loaded_points, MAX_POINTS);
+				assert(count, "something went wrong with 'get_points_count', returned '0'");
+				printf("Loaded %d points from level_meta file\n", count);
+
 				world->level.loaded = true;
+				world->level.spawnpoint = v2(20, 0); //TODO get spawnpoint from level meta json
+
+				world->player->en->pos = world->level.spawnpoint;
+				camera_pos = world->level.spawnpoint;
 			}
 
             world_frame = (WorldFrame){0};
@@ -1551,6 +1564,8 @@ int entry(int argc, char **argv){
 				world->player->en->pos.y = clamp(world->player->en->pos.y, -100000, 0);
 			}
 
+
+
 			if (IS_DEBUG){
 				player_hitbox_col.a = 0.5;
 				Vector2 size = get_sprite_size(get_sprite(SPRITE_player));
@@ -1566,26 +1581,39 @@ int entry(int argc, char **argv){
 
 
 			if (!level_selected){
-				
-				Matrix4 xform = m4_identity;
-				xform = m4_translate(xform, v3(screen_width * 0.5 - 15, screen_height * 0.5, 0));
-				draw_text_xform(font, STR("Level 1"), font_height, xform, v2(0.1, 0.1), COLOR_BLACK);
-				xform = m4_translate(xform, v3(15, -1, 0));
-				Draw_Quad* quad = draw_rect_xform(xform, v2(5, 5), COLOR_RED);
 
-				if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
-					if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
-						consume_key_just_pressed(MOUSE_BUTTON_LEFT);
-						level_selected = true;
-						world->level = *get_level(LEVEL_1);
+				for (LevelID id = 1; id < LEVEL_MAX; id++){
+					
+					int padding = 10;
+					float y_start = screen_height - 20;
 
-						string path = sprint(get_heap_allocator(), "res\\Abyssophobia\\Levels\\level_1_meta.txt");
-						if (os_is_file_s(path)){
-							// @ghost_points
-							bool suc = load_points_from_file((Vector2*)editor->points, 100, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_meta.txt"), get_heap_allocator());
-							editor->point_count = 4;
-							assert(suc, "failed");
-							printf("Level loaded from file\n");
+					Matrix4 xform = m4_identity;
+					xform = m4_translate(xform, v3(screen_width * 0.5 - 15, y_start - (id * padding), 0));
+					// draw_text_xform(font, STR("Level 1"), font_height, xform, v2(0.1, 0.1), COLOR_BLACK);
+					draw_text_xform(font, sprint(get_heap_allocator(), STR("Level %d"), id), font_height, xform, v2(0.1, 0.1), COLOR_BLACK);
+					xform = m4_translate(xform, v3(15, -1, 0));
+					Draw_Quad* quad = draw_rect_xform(xform, v2(5, 5), COLOR_RED);
+
+					if (range2f_contains(quad_to_range(*quad), get_mouse_pos_in_ndc())){
+						if (is_key_just_pressed(MOUSE_BUTTON_LEFT)){
+							consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+							level_selected = true;
+							// world->level = *get_level(LEVEL_1);
+							world->level = *get_level(id);
+
+
+							string path = sprint(get_heap_allocator(), "res\\Abyssophobia\\Levels\\level_%d_meta.txt", id);
+							if (os_is_file_s(path)){
+								// @ghost_points
+								// bool suc = load_points_from_file((Vector2*)editor->points, MAX_POINTS, STR("res\\Abyssophobia\\Levels\\"), STR("level_1_meta.txt"), get_heap_allocator());
+								bool suc = load_points_from_file((Vector2*)editor->points, MAX_POINTS, STR("res\\Abyssophobia\\Levels\\"), sprint(get_heap_allocator(), STR("level_%d_meta.txt"), id), get_heap_allocator());
+								assert(suc, "failed");
+								editor->point_count = get_points_count(editor->points, MAX_POINTS);
+								printf("Level loaded from file with %d points\n", editor->point_count);
+							}
+							else{
+								assert(1==0, "failed to load level meta. file doesn't exist? tried to load meta for level: '%d'", id);
+							}
 						}
 					}
 				}
@@ -1671,7 +1699,7 @@ int entry(int argc, char **argv){
 			}
 
 			set_screen_space();
-			draw_text_xform(font, STR("LEVEL EDITOR"), font_height, m4_translate(m4_identity, v3(screen_width * 0.5 - 10, screen_height-5, 0)), v2(0.1, 0.1), COLOR_RED);
+			draw_text_xform(font, STR("LEVEL EDITOR"), font_height, m4_translate(m4_identity, v3(screen_width * 0.5 - 15, screen_height-5, 0)), v2(0.1, 0.1), COLOR_RED);
 
 		}
 
